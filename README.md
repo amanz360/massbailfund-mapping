@@ -36,6 +36,15 @@ Each component has its own README with setup instructions and development guides
 - [Backend Development](backend-server/README.md)
 - [Infrastructure](infrastructure/README.md)
 
+## Live Environment
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://app.massbailfund.org.s3-website-us-east-1.amazonaws.com |
+| API | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/health |
+| API Docs | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/api/docs/ |
+| Admin Panel | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/admin/ |
+
 ## Quick Start
 
 **Full local development** (backend + frontend talking to each other):
