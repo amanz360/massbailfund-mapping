@@ -5,9 +5,11 @@ on:
     branches: [main]
     paths:
       - "infrastructure/**"
+      - ".github/workflows/deploy-infrastructure.yml"
   pull_request:
     paths:
       - "infrastructure/**"
+      - ".github/workflows/deploy-infrastructure.yml"
 
 env:
   AWS_REGION: us-east-1
