@@ -1265,7 +1265,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
 
     // Pin institutions at evenly-spaced positions to anchor neighborhoods
     const institutions = cy.nodes('[primary_type="Institution"]')
-    const INST_RADIUS = 380
+    const INST_RADIUS = 420
     const fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[] = []
     institutions.forEach((node, i) => {
       const angle = (2 * Math.PI * i) / institutions.length - Math.PI / 2
@@ -1283,23 +1283,23 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       animate: true,
       animationDuration: 800,
       quality: 'default',
-      nodeRepulsion: () => 9000,
+      nodeRepulsion: () => 18000,
       // Short membership edges pull DMs close to institutions;
       // long mechanism edges push mechanisms to the outer ring
       idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
         if (edge.hasClass('gravity-edge')) {
           // Higher affinity → shorter ideal distance to institution
           const weight = edge.data('_gravityWeight') ?? 1
-          return Math.max(80, 180 - 25 * weight)
+          return Math.max(60, 180 - 40 * weight)
         }
         if (edge.hasClass('membership-edge')) return 100
-        return 180 // mechanism↔DM edges
+        return 140 // mechanism↔DM edges
       },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
         if (edge.hasClass('gravity-edge')) {
           // Stronger pull for higher affinity (more DMs in that institution)
           const weight = edge.data('_gravityWeight') ?? 1
-          return 0.3 + 0.25 * weight
+          return 0.2 + 0.1 * weight
         }
         if (edge.hasClass('membership-edge')) {
           // Find which endpoint is the institution
@@ -1307,13 +1307,13 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           const instId = srcType === 'Institution' ? edge.source().id() : edge.target().id()
           const count = instMemberCount.get(instId) ?? 1
           // Smaller institution → higher elasticity (stronger pull)
-          return 0.2 + 0.6 * (1 - count / maxMembers)
+          return 0.2 + 1 * (1 - count / maxMembers)
         }
-        return 0.25 // weaker pull for mechanism edges
+        return 0.5 // mechanism edge pull
       },
       gravity: 0.15,
       gravityRange: 3.8,
-      numIter: 2500,
+      numIter: 5000,
       nodeDimensionsIncludeLabels: true,
       padding: 50,
       fixedNodeConstraint,
