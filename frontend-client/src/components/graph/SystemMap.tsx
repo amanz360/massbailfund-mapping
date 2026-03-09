@@ -244,80 +244,11 @@ function orderMechanismsForCircle(
  * Order DMs around an institution ring so those sharing many mechanisms
  * are placed adjacent, minimizing edge crossings.
  */
-function orderDmsForInstitutionRing(
-  dmIds: string[],
-  edges: GraphEdge[],
-  mechIds: Set<string>,
-): string[] {
-  if (dmIds.length <= 2) return dmIds
-
-  const dmIdSet = new Set(dmIds)
-  const mechToDms = new Map<string, Set<string>>()
-
-  for (const edge of edges) {
-    let dm: string | null = null
-    let mech: string | null = null
-    if (dmIdSet.has(edge.source) && mechIds.has(edge.target)) {
-      dm = edge.source; mech = edge.target
-    } else if (dmIdSet.has(edge.target) && mechIds.has(edge.source)) {
-      dm = edge.target; mech = edge.source
-    }
-    if (dm && mech) {
-      if (!mechToDms.has(mech)) mechToDms.set(mech, new Set())
-      mechToDms.get(mech)!.add(dm)
-    }
-  }
-
-  const similarity = new Map<string, Map<string, number>>()
-  for (const id of dmIds) similarity.set(id, new Map())
-
-  for (const [, dms] of mechToDms) {
-    const arr = [...dms]
-    for (let i = 0; i < arr.length; i++) {
-      for (let j = i + 1; j < arr.length; j++) {
-        const cur = similarity.get(arr[i])!.get(arr[j]) ?? 0
-        similarity.get(arr[i])!.set(arr[j], cur + 1)
-        similarity.get(arr[j])!.set(arr[i], cur + 1)
-      }
-    }
-  }
-
-  const placed: string[] = []
-  const remaining = new Set(dmIds)
-
-  let startId = dmIds[0]
-  let maxTotal = -1
-  for (const id of dmIds) {
-    let total = 0
-    for (const [, count] of similarity.get(id)!) total += count
-    if (total > maxTotal) { maxTotal = total; startId = id }
-  }
-  placed.push(startId)
-  remaining.delete(startId)
-
-  while (remaining.size > 0) {
-    const lastId = placed[placed.length - 1]
-    const sim = similarity.get(lastId)!
-    let bestId = ''
-    let bestScore = -1
-    for (const id of remaining) {
-      const score = sim.get(id) ?? 0
-      if (score > bestScore || (score === bestScore && !bestId)) {
-        bestScore = score
-        bestId = id
-      }
-    }
-    if (!bestId) bestId = remaining.values().next().value!
-    placed.push(bestId)
-    remaining.delete(bestId)
-  }
-
-  return placed
-}
-
 /**
- * Compute positions for the expanded institution view:
- * institution at center, primary DMs on inner ring, connected mechanisms on outer ring.
+ * Compute positions for the expanded institution view with tripartite flow layout.
+ * Institution on the left, DMs in a vertical stack in the center,
+ * mechanisms in a parabolic curve on the right.
+ * Uses barycenter heuristic to order DMs and mechanisms to minimise edge crossings.
  */
 function computeInstitutionExpandedPositions(
   data: GraphData,
@@ -331,130 +262,102 @@ function computeInstitutionExpandedPositions(
   const dmIdSet = new Set(primaryDmIds)
 
   // Find mechanisms connected to those DMs
-  const mechIds = new Set<string>()
+  const mechIdSet = new Set<string>()
   for (const edge of data.edges) {
     if (dmIdSet.has(edge.source)) {
       const target = data.nodes.find((n) => n.id === edge.target)
-      if (target?.primary_type === 'Mechanism') mechIds.add(edge.target)
+      if (target?.primary_type === 'Mechanism') mechIdSet.add(edge.target)
     }
     if (dmIdSet.has(edge.target)) {
       const source = data.nodes.find((n) => n.id === edge.source)
-      if (source?.primary_type === 'Mechanism') mechIds.add(edge.source)
+      if (source?.primary_type === 'Mechanism') mechIdSet.add(edge.source)
     }
   }
 
-  // Order DMs to minimize edge crossings
-  const orderedDmIds = orderDmsForInstitutionRing(primaryDmIds, data.edges, mechIds)
+  // Build DM ↔ mechanism adjacency
+  const dmToMechs = new Map<string, string[]>()
+  const mechToDms = new Map<string, string[]>()
+  for (const dmId of dmIdSet) dmToMechs.set(dmId, [])
+  for (const mechId of mechIdSet) mechToDms.set(mechId, [])
+  for (const edge of data.edges) {
+    if (dmIdSet.has(edge.source) && mechIdSet.has(edge.target)) {
+      dmToMechs.get(edge.source)!.push(edge.target)
+      mechToDms.get(edge.target)!.push(edge.source)
+    }
+    if (dmIdSet.has(edge.target) && mechIdSet.has(edge.source)) {
+      dmToMechs.get(edge.target)!.push(edge.source)
+      mechToDms.get(edge.source)!.push(edge.target)
+    }
+  }
 
-  // Institution at center
-  positions.set(institutionId, { x: 0, y: 0 })
+  // Barycenter heuristic: iteratively sort DMs by average mechanism rank
+  // and mechanisms by average DM rank to minimise edge crossings.
+  let dmOrder = [...dmIdSet].sort((a, b) => {
+    const nameA = data.nodes.find((n) => n.id === a)?.name || ''
+    const nameB = data.nodes.find((n) => n.id === b)?.name || ''
+    return nameA.localeCompare(nameB)
+  })
+  let mechOrder = [...mechIdSet].sort((a, b) => {
+    const nameA = data.nodes.find((n) => n.id === a)?.name || ''
+    const nameB = data.nodes.find((n) => n.id === b)?.name || ''
+    return nameA.localeCompare(nameB)
+  })
 
-  // DMs on inner ring
-  const DM_COUNT = orderedDmIds.length
-  const DM_RADIUS = Math.max(220, DM_COUNT * 28)
-  const dmAngles = new Map<string, number>()
+  for (let iter = 0; iter < 6; iter++) {
+    // Score each DM by average rank of its connected mechanisms
+    const mechRank = new Map<string, number>()
+    mechOrder.forEach((id, i) => mechRank.set(id, i))
 
+    const dmScored = dmOrder.map((dmId) => {
+      const mechs = dmToMechs.get(dmId) || []
+      const ranks = mechs.map((id) => mechRank.get(id) ?? 0)
+      const score = ranks.length > 0 ? ranks.reduce((s, r) => s + r, 0) / ranks.length : mechOrder.length / 2
+      return { id: dmId, score }
+    })
+    dmScored.sort((a, b) => a.score - b.score)
+    dmOrder = dmScored.map((d) => d.id)
+
+    // Score each mechanism by average rank of its connected DMs
+    const dmRank = new Map<string, number>()
+    dmOrder.forEach((id, i) => dmRank.set(id, i))
+
+    const mechScored = mechOrder.map((mechId) => {
+      const dms = mechToDms.get(mechId) || []
+      const ranks = dms.map((id) => dmRank.get(id) ?? 0)
+      const score = ranks.length > 0 ? ranks.reduce((s, r) => s + r, 0) / ranks.length : dmOrder.length / 2
+      return { id: mechId, score }
+    })
+    mechScored.sort((a, b) => a.score - b.score)
+    mechOrder = mechScored.map((s) => s.id)
+  }
+
+  const DM_COUNT = dmOrder.length
+  const MECH_COUNT = mechOrder.length
+
+  // --- Institution on the left ---
+  positions.set(institutionId, { x: -200, y: 0 })
+
+  // --- DMs in vertical stack at center ---
+  const DM_SPACING = DM_COUNT <= 4 ? 120 : Math.max(110, Math.ceil(480 / DM_COUNT))
+  const dmTotalHeight = (DM_COUNT - 1) * DM_SPACING
   for (let i = 0; i < DM_COUNT; i++) {
-    const angle = (2 * Math.PI * i) / DM_COUNT - Math.PI / 2
-    dmAngles.set(orderedDmIds[i], angle)
-    positions.set(orderedDmIds[i], {
-      x: Math.cos(angle) * DM_RADIUS,
-      y: Math.sin(angle) * DM_RADIUS,
+    positions.set(dmOrder[i], {
+      x: 0,
+      y: -dmTotalHeight / 2 + i * DM_SPACING,
     })
   }
 
-  // Mechanisms on outer ring — positioned near their connected DMs
-  const MECH_RADIUS = DM_RADIUS + 200
-  const mechPlacements: { id: string; angle: number }[] = []
+  // --- Mechanisms: parabolic curved column on the right ---
+  const VERT_SPACING = 95
+  const BASE_DIST = 200
+  const CURVE = Math.min(100, MECH_COUNT * 14)
 
-  for (const mechId of mechIds) {
-    const connAngles: number[] = []
-    for (const edge of data.edges) {
-      let dmId: string | null = null
-      if (edge.source === mechId && dmIdSet.has(edge.target)) dmId = edge.target
-      if (edge.target === mechId && dmIdSet.has(edge.source)) dmId = edge.source
-      if (dmId && dmAngles.has(dmId)) connAngles.push(dmAngles.get(dmId)!)
-    }
-
-    let angle = 0
-    if (connAngles.length > 0) {
-      let sinSum = 0
-      let cosSum = 0
-      for (const a of connAngles) { sinSum += Math.sin(a); cosSum += Math.cos(a) }
-      angle = Math.atan2(sinSum, cosSum)
-    }
-    mechPlacements.push({ id: mechId, angle })
+  for (let i = 0; i < MECH_COUNT; i++) {
+    const t = MECH_COUNT === 1 ? 0 : (i / (MECH_COUNT - 1)) * 2 - 1
+    const y = t * (MECH_COUNT - 1) * VERT_SPACING / 2
+    const x = BASE_DIST + CURVE * (1 - t * t)
+    positions.set(mechOrder[i], { x, y })
   }
-
-  mechPlacements.sort((a, b) => a.angle - b.angle)
-  for (const mp of mechPlacements) {
-    positions.set(mp.id, {
-      x: Math.cos(mp.angle) * MECH_RADIUS,
-      y: Math.sin(mp.angle) * MECH_RADIUS,
-    })
-  }
-
-  // Collision resolution for mechanisms
-  const mechPos = mechPlacements.map((mp) => ({ id: mp.id, ...positions.get(mp.id)! }))
-  for (let iter = 0; iter < 30; iter++) {
-    let moved = false
-    for (let i = 0; i < mechPos.length; i++) {
-      for (let j = i + 1; j < mechPos.length; j++) {
-        const a = mechPos[i]
-        const b = mechPos[j]
-        let dx = b.x - a.x
-        let dy = b.y - a.y
-        let dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < 0.01) {
-          b.x += 0.1 * (i + 1)
-          b.y += 0.1 * (i + 1)
-          dx = b.x - a.x
-          dy = b.y - a.y
-          dist = Math.sqrt(dx * dx + dy * dy)
-        }
-        const minDist = 170
-        if (dist < minDist) {
-          const push = (minDist - dist) / 2
-          const nx = dx / dist
-          const ny = dy / dist
-          a.x -= nx * push
-          a.y -= ny * push
-          b.x += nx * push
-          b.y += ny * push
-          moved = true
-        }
-      }
-    }
-    // Push mechanisms away from DM nodes
-    for (const mp of mechPos) {
-      for (const dmId of orderedDmIds) {
-        const dp = positions.get(dmId)!
-        const dx = mp.x - dp.x
-        const dy = mp.y - dp.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist > 0 && dist < 170) {
-          const push = 170 - dist
-          const nx = dx / dist
-          const ny = dy / dist
-          mp.x += nx * push
-          mp.y += ny * push
-          moved = true
-        }
-      }
-    }
-    // Keep mechanisms outside the DM ring
-    for (const mp of mechPos) {
-      const r = Math.sqrt(mp.x * mp.x + mp.y * mp.y)
-      const minR = DM_RADIUS + 180
-      if (r < minR) {
-        const scale = minR / r
-        mp.x *= scale
-        mp.y *= scale
-      }
-    }
-    if (!moved) break
-  }
-  for (const mp of mechPos) positions.set(mp.id, { x: mp.x, y: mp.y })
 
   return positions
 }
@@ -1444,7 +1347,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       layoutRef.current = layout
       layout.run()
       layout.one('layoutstop', () => {
-        ensureEdgeLabelsFit(cy)
         cy.fit(undefined, 60)
       })
 
