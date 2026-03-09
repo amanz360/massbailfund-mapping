@@ -81,6 +81,30 @@ resource "aws_iam_role_policy" "ecs_task_secrets" {
   })
 }
 
+resource "aws_iam_role_policy" "ecs_task_s3_media" {
+  name = "S3MediaAccess"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+        ]
+        Resource = [
+          "arn:aws:s3:::mbf-*-media",
+          "arn:aws:s3:::mbf-*-media/*",
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "ecs_task_exec_command" {
   name = "ECSExecAccess"
   role = aws_iam_role.ecs_task.id

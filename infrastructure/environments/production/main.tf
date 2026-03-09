@@ -112,9 +112,11 @@ module "ecs_web" {
   task_role_arn      = var.ecs_task_role_arn
 
   environment_variables = {
-    RUN_MODE   = "web"
-    ENV_CONFIG = var.environment
-    PGSSLMODE  = "require"
+    RUN_MODE                = "web"
+    ENV_CONFIG              = var.environment
+    PGSSLMODE               = "require"
+    AWS_STORAGE_BUCKET_NAME = module.s3_media.bucket_id
+    AWS_S3_REGION_NAME      = var.aws_region
   }
 
   secrets = {
@@ -123,6 +125,21 @@ module "ecs_web" {
   }
 
   aws_region = var.aws_region
+}
+
+################################################################################
+# S3 Media Bucket (uploaded images)
+################################################################################
+
+module "s3_media" {
+  source = "../../modules/s3-media"
+
+  bucket_name = "mbf-${var.environment}-media"
+
+  cors_allowed_origins = [
+    "http://app.massbailfund.org.s3-website-us-east-1.amazonaws.com",
+    "https://app.massbailfund.org",
+  ]
 }
 
 ################################################################################
