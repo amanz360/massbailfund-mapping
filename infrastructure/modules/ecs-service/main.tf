@@ -88,10 +88,11 @@ resource "aws_ecs_task_definition" "main" {
 ################################################################################
 
 resource "aws_ecs_service" "main" {
-  name            = local.full_name
-  cluster         = var.cluster_arn
-  task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = var.desired_count
+  name                   = local.full_name
+  cluster                = var.cluster_arn
+  task_definition        = aws_ecs_task_definition.main.arn
+  desired_count          = var.desired_count
+  enable_execute_command = true
 
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
