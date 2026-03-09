@@ -49,8 +49,7 @@ You also need `make` installed:
 4. **Create a superuser (for admin access):**
 
    ```bash
-   make shell
-   ./manage.py createsuperuser
+   make superuser
    ```
 
    Admin panel is at [http://localhost:8080/admin/](http://localhost:8080/admin/).
@@ -118,6 +117,9 @@ backend-server/
 | `GET /api/v1/decision-makers/` | List/detail decision makers with roles and aliases |
 | `GET /api/v1/institutions/` | List/detail institutions with memberships |
 | `GET /api/v1/mechanism-roles/` | Mechanism-to-decision-maker relationships |
+| `GET /api/v1/aliases/` | Decision maker aliases |
+| `GET /api/v1/memberships/` | Institution memberships |
+| `GET /api/v1/references/` | Mechanism references |
 | `GET /api/v1/graph/` | Full graph payload (nodes + edges) for the system map |
 | `GET /api/v1/glossary/` | Glossary terms linked to mechanisms |
 | `GET /api/v1/resources/` | Resources (use `?general=true` for mechanism-independent) |
@@ -199,6 +201,8 @@ make test TEST_PATH=core/tests/test_views.py::TestMechanismAPI::test_list
 | `ENV_CONFIG` | Settings profile: `dev`, `test`, `production` | `dev` |
 | `DATABASE_URL` | PostgreSQL connection string | Local defaults |
 | `DJANGO_SECRET_KEY` | Django secret key | Insecure default (dev only) |
+| `AWS_STORAGE_BUCKET_NAME` | S3 bucket for media uploads (enables S3 storage) | None (local filesystem) |
+| `AWS_S3_REGION_NAME` | AWS region for S3 media bucket | `us-east-1` |
 | `SENTRY_DSN` | Sentry error tracking (optional) | None |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins | None (dev allows all) |
 
@@ -239,8 +243,8 @@ make bdu
 
 If you're new to the backend stack:
 
-- [Django Tutorial](https://docs.djangoproject.com/en/5.1/intro/tutorial01/) — Start here for Django fundamentals
+- [Django Tutorial](https://docs.djangoproject.com/en/6.0/intro/tutorial01/) — Start here for Django fundamentals
 - [Django REST Framework Tutorial](https://www.django-rest-framework.org/tutorial/quickstart/) — Serializers, ViewSets, routers
-- [Django Models](https://docs.djangoproject.com/en/5.1/topics/db/models/) — Fields, relationships, migrations
+- [Django Models](https://docs.djangoproject.com/en/6.0/topics/db/models/) — Fields, relationships, migrations
 - [DRF Serializers](https://www.django-rest-framework.org/api-guide/serializers/) — How API responses are shaped
 - [drf-spectacular](https://drf-spectacular.readthedocs.io/) — OpenAPI schema generation

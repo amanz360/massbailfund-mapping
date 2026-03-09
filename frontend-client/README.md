@@ -76,6 +76,7 @@ frontend-client/
 │   │   └── Browse.tsx         # Browse/wiki view
 │   ├── components/
 │   │   ├── graph/             # System map components (Cytoscape, detail panel)
+│   │   ├── search/            # Search bar component
 │   │   └── layout/            # Layout and error boundary
 │   ├── themes/
 │   │   └── theme.ts           # MUI theme customization
@@ -161,7 +162,7 @@ The app uses Material UI with Emotion:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_DOMAIN_URL` | Backend API base URL | `http://127.0.0.1:8000/` |
+| `VITE_API_DOMAIN_URL` | Backend API base URL | `http://127.0.0.1:8080/` |
 
 Set at build time (prefix `VITE_` exposes it to client code via `import.meta.env`).
 
