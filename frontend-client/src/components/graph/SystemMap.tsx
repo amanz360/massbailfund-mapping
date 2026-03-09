@@ -1293,8 +1293,173 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
     })
 
+    // Seed initial positions so fcose converges to the same layout every time.
+    // DMs start offset from their best institution toward their secondary institution
+    // (or outward from center if they have only one primary).
+    const instPositions = new Map(fixedNodeConstraint.map((c) => [c.nodeId, c.position]))
+    const DM_OFFSET = 80
+    const DM_SPREAD = 30 // perpendicular spacing between DMs in the same corridor
+
+    // First pass: compute each DM's corridor direction and group by corridor key
+    const dmCorridors = new Map<string, { direction: { dx: number; dy: number }; bestPos: { x: number; y: number }; nodes: cytoscape.NodeSingular[] }>()
+    cy.nodes('[primary_type="Decision Maker"]').forEach((node) => {
+      const primaryInsts = graphData?.memberships
+        .filter((m) => m.member === node.id() && m.membership_type === 'Primary')
+        .map((m) => m.institution) ?? []
+      if (primaryInsts.length === 0) return
+
+      const bestInstId = primaryInsts.reduce((best, id) =>
+        (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity) ? id : best,
+      )
+      const bestPos = instPositions.get(bestInstId)
+      if (!bestPos) return
+
+      const secondaryIds = primaryInsts.filter((id) => id !== bestInstId).sort()
+      const externalIds = (graphData?.memberships
+        .filter((m) => m.member === node.id() && m.membership_type === 'External' && m.institution !== bestInstId)
+        .map((m) => m.institution) ?? [])
+        .filter((id) => !secondaryIds.includes(id))
+        .sort()
+      // Corridor key: best institution + sorted secondary + external institutions
+      const corridorKey = `${bestInstId}|${secondaryIds.join(',')}|${externalIds.join(',')}`
+
+      const EXTERNAL_WEIGHT = 0.3
+      let dx: number, dy: number
+      if (secondaryIds.length > 0 || externalIds.length > 0) {
+        // Weighted average: primaries at 1.0, externals at EXTERNAL_WEIGHT
+        let wx = 0, wy = 0, totalW = 0
+        for (const id of secondaryIds) {
+          const p = instPositions.get(id)
+          if (p) { wx += p.x * 1.0; wy += p.y * 1.0; totalW += 1.0 }
+        }
+        for (const id of externalIds) {
+          const p = instPositions.get(id)
+          if (p) { wx += p.x * EXTERNAL_WEIGHT; wy += p.y * EXTERNAL_WEIGHT; totalW += EXTERNAL_WEIGHT }
+        }
+        dx = (wx / totalW) - bestPos.x
+        dy = (wy / totalW) - bestPos.y
+      } else {
+        dx = bestPos.x
+        dy = bestPos.y
+      }
+
+      if (!dmCorridors.has(corridorKey)) {
+        dmCorridors.set(corridorKey, { direction: { dx, dy }, bestPos, nodes: [] })
+      }
+      dmCorridors.get(corridorKey)!.nodes.push(node)
+    })
+
+    // Second pass: place DMs, fanning out perpendicular to corridor direction
+    for (const [, { direction, bestPos, nodes }] of dmCorridors) {
+      const len = Math.sqrt(direction.dx * direction.dx + direction.dy * direction.dy) || 1
+      const ndx = direction.dx / len
+      const ndy = direction.dy / len
+      // Perpendicular vector
+      const pdx = -ndy
+      const pdy = ndx
+
+      nodes.forEach((node, i) => {
+        // Center the fan: offset from -(n-1)/2 to +(n-1)/2
+        const perpOffset = (i - (nodes.length - 1) / 2) * DM_SPREAD
+        node.position({
+          x: bestPos.x + ndx * DM_OFFSET + pdx * perpOffset,
+          y: bestPos.y + ndy * DM_OFFSET + pdy * perpOffset,
+        })
+      })
+    }
+    // Seed mechanisms: average connected DM positions, then fan out by institution set
+    const MECH_SPREAD = 40 // perpendicular spacing between mechanisms in the same corridor
+    const mechCorridors = new Map<string, { center: { x: number; y: number }; direction: { dx: number; dy: number }; nodes: cytoscape.NodeSingular[] }>()
+    cy.nodes('[primary_type="Mechanism"]').forEach((node) => {
+      const connectedDMs = node.connectedEdges('.landing-edge')
+        .connectedNodes('[primary_type="Decision Maker"]')
+        .filter((n) => n.id() !== node.id())
+      if (connectedDMs.length === 0) return
+
+      let ax = 0, ay = 0
+      connectedDMs.forEach((dm) => {
+        const p = dm.position()
+        ax += p.x
+        ay += p.y
+      })
+      ax /= connectedDMs.length
+      ay /= connectedDMs.length
+
+      // Push outward from center — fewer institutions = further out
+      const gravityEdges = node.connectedEdges('.gravity-edge')
+      const numInst = gravityEdges.length
+      const pushFactor = numInst <= 1 ? 1.4 : numInst === 2 ? 1.15 : 1.0
+      ax *= pushFactor
+      ay *= pushFactor
+
+      // Group by sorted institution affinity set
+      const instIds = gravityEdges.map((e) =>
+        e.source().id() === node.id() ? e.target().id() : e.source().id()
+      ).sort()
+      const corridorKey = instIds.join(',')
+
+      if (!mechCorridors.has(corridorKey)) {
+        // Direction from center toward the average position
+        mechCorridors.set(corridorKey, { center: { x: ax, y: ay }, direction: { dx: ax, dy: ay }, nodes: [] })
+      }
+      mechCorridors.get(corridorKey)!.nodes.push(node)
+    })
+
+    for (const [, { direction, nodes }] of mechCorridors) {
+      const len = Math.sqrt(direction.dx * direction.dx + direction.dy * direction.dy) || 1
+      const ndx = direction.dx / len
+      const ndy = direction.dy / len
+      const pdx = -ndy
+      const pdy = ndx
+
+      // Compute each mechanism's base position individually (they may differ)
+      // then apply perpendicular spread
+      nodes.forEach((node, i) => {
+        const connectedDMs = node.connectedEdges('.landing-edge')
+          .connectedNodes('[primary_type="Decision Maker"]')
+          .filter((n) => n.id() !== node.id())
+        // Build gravity weight lookup: institution → weight for this mechanism
+        const gravityEdges = node.connectedEdges('.gravity-edge')
+        const instWeights = new Map<string, number>()
+        gravityEdges.forEach((e) => {
+          const instId = e.source().id() === node.id() ? e.target().id() : e.source().id()
+          instWeights.set(instId, e.data('_gravityWeight') ?? 1)
+        })
+        // Weight each DM's position by the gravity weight to their best institution
+        let ax = 0, ay = 0, totalW = 0
+        connectedDMs.forEach((dm) => {
+          // Find this DM's best institution
+          const dmPrimaryInsts = graphData?.memberships
+            .filter((m) => m.member === dm.id() && m.membership_type === 'Primary')
+            .map((m) => m.institution) ?? []
+          const dmBestInst = dmPrimaryInsts.length > 0
+            ? dmPrimaryInsts.reduce((best, id) =>
+                (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity) ? id : best)
+            : null
+          const w = (dmBestInst ? instWeights.get(dmBestInst) : null) ?? 1
+          const p = dm.position()
+          ax += p.x * w
+          ay += p.y * w
+          totalW += w
+        })
+        ax /= totalW || 1
+        ay /= totalW || 1
+        const numInst = gravityEdges.length
+        const pushFactor = numInst <= 1 ? 1.4 : numInst === 2 ? 1.15 : 1.0
+        ax *= pushFactor
+        ay *= pushFactor
+
+        const perpOffset = (i - (nodes.length - 1) / 2) * MECH_SPREAD
+        node.position({
+          x: ax + pdx * perpOffset,
+          y: ay + pdy * perpOffset,
+        })
+      })
+    }
+
     const layout = cy.layout({
       name: 'fcose',
+      randomize: false,
       animate: true,
       animationDuration: 800,
       quality: 'default',
@@ -1307,15 +1472,15 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           const weight = edge.data('_gravityWeight') ?? 1
           return Math.max(60, 180 - 40 * weight)
         }
-        if (edge.hasClass('membership-edge')) return 10
+        if (edge.hasClass('membership-edge')) return 50
         if (edge.hasClass('hidden-membership-edge')) return 160 // secondary membership length
-        return 140 // mechanism↔DM edges
+        return 180 // mechanism↔DM edges
       },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
         if (edge.hasClass('gravity-edge')) {
           // Stronger pull for higher affinity (more DMs in that institution)
           const weight = edge.data('_gravityWeight') ?? 1
-          return 0.2 + 0.1 * weight
+          return 0.2 + .3 * weight
         }
         if (edge.hasClass('hidden-membership-edge')) return 0.2 // secondary membership pull
         if (edge.hasClass('membership-edge')) {
@@ -1324,7 +1489,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           const instId = srcType === 'Institution' ? edge.source().id() : edge.target().id()
           const count = instMemberCount.get(instId) ?? 1
           // Smaller institution → higher elasticity (stronger pull)
-          return 0.2 + 1 * (1 - count / maxMembers)
+          return 0.2 + .3 * (1 - count / maxMembers)
         }
         return 0.5 // mechanism edge pull
       },
