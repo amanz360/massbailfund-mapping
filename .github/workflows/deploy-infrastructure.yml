@@ -60,6 +60,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Plan shared
+        working-directory: infrastructure/environments/shared
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -no-color
+
       - name: Plan production
         working-directory: infrastructure/environments/production
         run: |
@@ -88,6 +94,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Apply shared
+        working-directory: infrastructure/environments/shared
+        run: |
+          terraform init -input=false
+          terraform apply -auto-approve -input=false
 
       - name: Apply production
         working-directory: infrastructure/environments/production
