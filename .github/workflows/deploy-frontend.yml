@@ -5,9 +5,15 @@ on:
     branches: [main]
     paths:
       - "frontend-client/**"
+      - ".github/workflows/deploy-frontend.yml"
   pull_request:
     paths:
       - "frontend-client/**"
+      - ".github/workflows/deploy-frontend.yml"
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   AWS_REGION: us-east-1

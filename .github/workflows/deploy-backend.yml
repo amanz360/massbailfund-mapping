@@ -5,9 +5,15 @@ on:
     branches: [main]
     paths:
       - "backend-server/**"
+      - ".github/workflows/deploy-backend.yml"
   pull_request:
     paths:
       - "backend-server/**"
+      - ".github/workflows/deploy-backend.yml"
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   AWS_REGION: us-east-1
