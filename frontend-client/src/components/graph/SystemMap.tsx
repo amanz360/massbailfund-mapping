@@ -1287,7 +1287,11 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       // Short membership edges pull DMs close to institutions;
       // long mechanism edges push mechanisms to the outer ring
       idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
-        if (edge.hasClass('gravity-edge')) return 160 // pull mechanisms toward institutions
+        if (edge.hasClass('gravity-edge')) {
+          // Higher affinity → shorter ideal distance to institution
+          const weight = edge.data('_gravityWeight') ?? 1
+          return Math.max(80, 180 - 25 * weight)
+        }
         if (edge.hasClass('membership-edge')) return 100
         return 180 // mechanism↔DM edges
       },
@@ -1295,7 +1299,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         if (edge.hasClass('gravity-edge')) {
           // Stronger pull for higher affinity (more DMs in that institution)
           const weight = edge.data('_gravityWeight') ?? 1
-          return 0.3 + 0.15 * weight
+          return 0.3 + 0.25 * weight
         }
         if (edge.hasClass('membership-edge')) {
           // Find which endpoint is the institution
