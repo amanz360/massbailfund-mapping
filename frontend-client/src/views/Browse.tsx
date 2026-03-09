@@ -1,4 +1,4 @@
-import { useMemo, createContext, useContext } from 'react'
+import { useMemo } from 'react'
 import { Box, CircularProgress, Typography, Button, ButtonBase, LinearProgress, useTheme } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
@@ -16,34 +16,13 @@ import {
   selectBrowseLoading,
   selectBrowseError,
 } from '../store/slices/browseSlice'
-import type {
-  MechanismDetail,
-  DecisionMakerDetail,
-  InstitutionDetail,
-} from '../types/models'
+import { BrowseDataContext } from '../contexts/BrowseDataContext'
 import BrowseIndex from '../components/browse/BrowseIndex'
 import EntityDetailRouter from '../components/browse/EntityDetailRouter'
 
 export type Section = 'mechanisms' | 'decision-makers' | 'glossary' | 'resources'
 
 const VALID_SECTIONS: Section[] = ['mechanisms', 'decision-makers', 'glossary', 'resources']
-
-// Context so detail pages can access browse data for cross-referencing
-export interface BrowseData {
-  mechanisms: MechanismDetail[]
-  decisionMakers: DecisionMakerDetail[]
-  institutions: InstitutionDetail[]
-}
-
-export const BrowseDataContext = createContext<BrowseData>({
-  mechanisms: [],
-  decisionMakers: [],
-  institutions: [],
-})
-
-export function useBrowseData() {
-  return useContext(BrowseDataContext)
-}
 
 export default function Browse() {
   const theme = useTheme()

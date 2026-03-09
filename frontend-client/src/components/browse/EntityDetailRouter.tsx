@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Box, Typography, Link } from '@mui/material'
 import { Link as RouterLink, useParams } from 'react-router-dom'
-import { useBrowseData } from '../../views/Browse'
+import { useBrowseData } from '../../contexts/BrowseDataContext'
 import { isMechanismDetail, isDecisionMakerDetail, isInstitutionDetail } from '../../types/models'
 import MechanismDetailPage from './MechanismDetailPage'
 import DecisionMakerDetailPage from './DecisionMakerDetailPage'

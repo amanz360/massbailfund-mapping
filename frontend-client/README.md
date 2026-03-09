@@ -74,6 +74,8 @@ frontend-client/
 │   │   ├── Landing.tsx        # Landing page
 │   │   ├── Home.tsx           # System map view (main visualization)
 │   │   └── Browse.tsx         # Browse/wiki view
+│   ├── contexts/
+│   │   └── BrowseDataContext.ts # Browse data context + useBrowseData hook
 │   ├── components/
 │   │   ├── graph/             # System map components (Cytoscape, detail panel)
 │   │   ├── search/            # Search bar component

@@ -6,7 +6,7 @@ import Masonry from 'react-masonry-css'
 import { Link as RouterLink } from 'react-router-dom'
 import type { GlossaryTermItem, ResourceItem, MechanismDetail } from '../../types/models'
 import type { Section } from '../../views/Browse'
-import { useBrowseData } from '../../views/Browse'
+import { useBrowseData } from '../../contexts/BrowseDataContext'
 import { buildInstitutionColors, displayHostname } from '../../utils/entities'
 
 interface BrowseIndexProps {

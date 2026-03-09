@@ -478,6 +478,171 @@ function computeInstitutionExpandedPositions(
 }
 
 /**
+ * Compute positions for expanded mechanism view with tripartite flow layout.
+ * Institutions on the left, DMs in a vertical stack in the center, mechanism on the right.
+ */
+function computeMechanismExpandedPositions(
+  data: GraphData,
+  mechanismId: string,
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>()
+
+  // Collect connected DM IDs (deduplicated)
+  const dmIdSet = new Set<string>()
+  for (const edge of data.edges) {
+    if (edge.source === mechanismId) {
+      const target = data.nodes.find((n) => n.id === edge.target)
+      if (target?.primary_type === 'Decision Maker') dmIdSet.add(edge.target)
+    }
+    if (edge.target === mechanismId) {
+      const source = data.nodes.find((n) => n.id === edge.source)
+      if (source?.primary_type === 'Decision Maker') dmIdSet.add(edge.source)
+    }
+  }
+  const dmIds = [...dmIdSet]
+
+  // Collect primary institutions of those DMs (deduplicated)
+  const instIdSet = new Set<string>()
+  for (const m of data.memberships) {
+    if (dmIdSet.has(m.member) && m.membership_type === 'Primary') {
+      instIdSet.add(m.institution)
+    }
+  }
+  const instIds = [...instIdSet]
+
+  const DM_COUNT = dmIds.length
+
+  // --- Mechanism on the right ---
+  positions.set(mechanismId, { x: 250, y: 0 })
+
+  // --- DMs in vertical stack at center ---
+  // Scale spacing down for large DM counts to keep the stack compact
+  const DM_SPACING = DM_COUNT <= 4 ? 80 : Math.max(60, Math.ceil(320 / DM_COUNT))
+  const dmTotalHeight = (DM_COUNT - 1) * DM_SPACING
+  for (let i = 0; i < DM_COUNT; i++) {
+    positions.set(dmIds[i], {
+      x: 0,
+      y: -dmTotalHeight / 2 + i * DM_SPACING,
+    })
+  }
+
+  // --- Institutions on the left, aligned with their connected DMs ---
+  // Position each institution at the average y of its connected DMs in this view
+  if (instIds.length > 0) {
+    const INST_X = -200
+    const instPositions: { id: string; y: number }[] = []
+
+    for (const instId of instIds) {
+      const connectedDmYs: number[] = []
+      for (const m of data.memberships) {
+        if (m.institution === instId && m.membership_type === 'Primary' && dmIdSet.has(m.member)) {
+          const dmPos = positions.get(m.member)
+          if (dmPos) connectedDmYs.push(dmPos.y)
+        }
+      }
+      const avgY = connectedDmYs.length > 0
+        ? connectedDmYs.reduce((sum, y) => sum + y, 0) / connectedDmYs.length
+        : 0
+      instPositions.push({ id: instId, y: avgY })
+    }
+
+    // Sort by y and resolve collisions (institution diamonds are ~82px tall)
+    instPositions.sort((a, b) => a.y - b.y)
+    const MIN_INST_DIST = 100
+    for (let iter = 0; iter < 20; iter++) {
+      let moved = false
+      for (let i = 0; i < instPositions.length - 1; i++) {
+        const gap = instPositions[i + 1].y - instPositions[i].y
+        if (gap < MIN_INST_DIST) {
+          const push = (MIN_INST_DIST - gap) / 2
+          instPositions[i].y -= push
+          instPositions[i + 1].y += push
+          moved = true
+        }
+      }
+      if (!moved) break
+    }
+
+    for (const ip of instPositions) {
+      positions.set(ip.id, { x: INST_X, y: ip.y })
+    }
+  }
+
+  return positions
+}
+
+/**
+ * Compute positions for expanded DM view with tripartite flow layout.
+ * Institutions on the left, DM at center, mechanisms in a radial arc on the right.
+ */
+function computeDmExpandedPositions(
+  data: GraphData,
+  dmId: string,
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>()
+
+  // DM at center
+  positions.set(dmId, { x: 0, y: 0 })
+
+  // Collect connected mechanism IDs (deduplicated)
+  const mechIdSet = new Set<string>()
+  for (const edge of data.edges) {
+    if (edge.source === dmId) {
+      const target = data.nodes.find((n) => n.id === edge.target)
+      if (target?.primary_type === 'Mechanism') mechIdSet.add(edge.target)
+    }
+    if (edge.target === dmId) {
+      const source = data.nodes.find((n) => n.id === edge.source)
+      if (source?.primary_type === 'Mechanism') mechIdSet.add(edge.source)
+    }
+  }
+  const mechIds = [...mechIdSet]
+
+  // Collect primary institution IDs
+  const instIds = data.memberships
+    .filter((m) => m.member === dmId && m.membership_type === 'Primary')
+    .map((m) => m.institution)
+
+  const MECH_COUNT = mechIds.length
+  const INST_COUNT = instIds.length
+
+  // --- Mechanisms: curved column on the right side ---
+  // Vertical stack with a parabolic bulge — mechanisms at the center of the
+  // fan are pushed further right, creating a natural arc/fan feel without
+  // the uneven spacing that a circular arc produces for rectangular nodes.
+  const VERT_SPACING = 95  // vertical gap between mechanism centers (nodes are 60px tall)
+  const BASE_DIST = 200    // horizontal distance from center for top/bottom mechanisms
+  const CURVE = Math.min(100, MECH_COUNT * 14) // extra rightward push at the fan center
+
+  for (let i = 0; i < MECH_COUNT; i++) {
+    const t = MECH_COUNT === 1 ? 0 : (i / (MECH_COUNT - 1)) * 2 - 1 // -1 to 1
+    const y = t * (MECH_COUNT - 1) * VERT_SPACING / 2
+    const x = BASE_DIST + CURVE * (1 - t * t) // parabola: max at center, min at edges
+    positions.set(mechIds[i], { x, y })
+  }
+
+  // --- Institutions: left side ---
+  if (INST_COUNT > 0) {
+    const INST_RADIUS = 200
+    if (INST_COUNT === 1) {
+      positions.set(instIds[0], { x: -INST_RADIUS, y: 0 })
+    } else {
+      // Spread vertically on the left — institution diamonds are ~82px tall
+      const instSpacing = 120
+      const totalHeight = (INST_COUNT - 1) * instSpacing
+      for (let i = 0; i < INST_COUNT; i++) {
+        positions.set(instIds[i], {
+          x: -INST_RADIUS,
+          y: -totalHeight / 2 + i * instSpacing,
+        })
+      }
+    }
+  }
+
+  return positions
+}
+
+/**
  * Compute positions for all nodes in a circular layout.
  * Mechanisms on an inner ring, decision makers on an outer ring
  * positioned near their connected mechanisms.
@@ -835,7 +1000,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             name: dm.name,
             primary_type: dm.primary_type,
             secondary_type: dm.secondary_type,
-            highConnectivity: connCount >= 5 ? true : undefined,
           },
           classes: 'expanded-dm',
         })
@@ -851,6 +1015,37 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           },
           classes: 'expanded-edge',
         })
+      }
+
+      // Add primary institution nodes and membership edges for connected DMs
+      const addedInsts = new Set<string>()
+      for (const dmId of connectedDmIds) {
+        for (const m of data.memberships) {
+          if (m.member === dmId && m.membership_type === 'Primary') {
+            if (!addedInsts.has(m.institution)) {
+              const inst = data.nodes.find((n) => n.id === m.institution)
+              if (!inst) continue
+              elements.push({
+                data: {
+                  id: inst.id,
+                  name: inst.name,
+                  primary_type: inst.primary_type,
+                  secondary_type: inst.secondary_type,
+                },
+              })
+              addedInsts.add(m.institution)
+            }
+            elements.push({
+              data: {
+                id: `mech-dm-inst-${dmId}-${m.institution}`,
+                source: dmId,
+                target: m.institution,
+                relationship_type: 'Member',
+              },
+              classes: 'membership-edge',
+            })
+          }
+        }
       }
 
       return elements
@@ -874,7 +1069,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           name: dm.name,
           primary_type: dm.primary_type,
           secondary_type: dm.secondary_type,
-          highConnectivity: connCount >= 5 ? true : undefined,
         },
         classes: 'center-dm',
       })
@@ -923,6 +1117,31 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         })
       }
 
+      // Add primary institution nodes and membership edges
+      for (const m of data.memberships) {
+        if (m.member === dmId && m.membership_type === 'Primary') {
+          const inst = data.nodes.find((n) => n.id === m.institution)
+          if (!inst) continue
+          elements.push({
+            data: {
+              id: inst.id,
+              name: inst.name,
+              primary_type: inst.primary_type,
+              secondary_type: inst.secondary_type,
+            },
+          })
+          elements.push({
+            data: {
+              id: `dm-inst-${dmId}-${m.institution}`,
+              source: dmId,
+              target: m.institution,
+              relationship_type: 'Member',
+            },
+            classes: 'membership-edge',
+          })
+        }
+      }
+
       return elements
     },
     [],
@@ -963,7 +1182,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             name: dm.name,
             primary_type: dm.primary_type,
             secondary_type: dm.secondary_type,
-            highConnectivity: connCount >= 5 ? true : undefined,
           },
           classes: 'expanded-dm',
         })
@@ -1071,7 +1289,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
     onInstitutionExpand?.(null)
     onNodeSelect?.(null)
     dispatch(clearDetail())
-  }, [graphData, buildLanding, institutionColors, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch])
+  }, [graphData, buildLanding, institutionColors, theme.palette.institution.main, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch])
 
   const renderExpanded = useCallback(
     (mechanismId: string) => {
@@ -1101,21 +1319,23 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         applyDotIndicators(node, graphData, institutionColors)
       })
 
+      // Apply institution colors to institution nodes
+      cy.nodes('[primary_type="Institution"]').forEach((node) => {
+        const color = institutionColors.get(node.id()) || theme.palette.institution.main
+        node.style('background-color', color)
+      })
+
+      const positions = computeMechanismExpandedPositions(graphData, mechanismId)
+
       const layout = cy.layout({
-        name: 'concentric',
-        concentric: (node: cytoscape.NodeSingular) => {
-          return node.hasClass('center-mechanism') ? 2 : 1
-        },
-        levelWidth: () => 1,
+        name: 'preset',
+        positions: (node: cytoscape.NodeSingular) => positions.get(node.id()) || { x: 0, y: 0 },
         animate: true,
         animationDuration: 400,
-        padding: 60,
-        minNodeSpacing: 40,
       } as cytoscape.LayoutOptions)
       layoutRef.current = layout
       layout.run()
       layout.one('layoutstop', () => {
-        ensureEdgeLabelsFit(cy)
         cy.fit(undefined, 60)
       })
 
@@ -1130,7 +1350,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       onNodeSelect?.(mechanismId)
       dispatch(selectEntity(mechanismId))
     },
-    [graphData, buildExpanded, institutionColors, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch],
+    [graphData, buildExpanded, institutionColors, theme.palette.institution.main, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch],
   )
 
   const renderExpandedDm = useCallback(
@@ -1155,16 +1375,19 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       // Apply institution dot indicators to the center DM node
       applyDotIndicators(cy.getElementById(dmId), graphData, institutionColors)
 
+      // Apply institution colors to institution nodes
+      cy.nodes('[primary_type="Institution"]').forEach((node) => {
+        const color = institutionColors.get(node.id()) || theme.palette.institution.main
+        node.style('background-color', color)
+      })
+
+      const positions = computeDmExpandedPositions(graphData, dmId)
+
       const layout = cy.layout({
-        name: 'concentric',
-        concentric: (node: cytoscape.NodeSingular) => {
-          return node.hasClass('center-dm') ? 2 : 1
-        },
-        levelWidth: () => 1,
+        name: 'preset',
+        positions: (node: cytoscape.NodeSingular) => positions.get(node.id()) || { x: 0, y: 0 },
         animate: true,
         animationDuration: 400,
-        padding: 60,
-        minNodeSpacing: 40,
       } as cytoscape.LayoutOptions)
       layoutRef.current = layout
       layout.run()
@@ -1184,7 +1407,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       onNodeSelect?.(dmId)
       dispatch(selectEntity(dmId))
     },
-    [graphData, buildExpandedDm, institutionColors, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch],
+    [graphData, buildExpandedDm, institutionColors, theme.palette.institution.main, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch],
   )
 
   const renderExpandedInstitution = useCallback(
@@ -1241,7 +1464,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       onNodeSelect?.(institutionId)
       dispatch(selectEntity(institutionId))
     },
-    [graphData, buildExpandedInstitution, institutionColors, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch],
+    [graphData, buildExpandedInstitution, institutionColors, theme.palette.institution.main, onNodeSelect, onMechanismExpand, onDmExpand, onInstitutionExpand, dispatch],
   )
 
   const handleDmClick = useCallback(
@@ -1343,12 +1566,18 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             evt.target.cy().nodes('.active-dm').removeClass('active-dm')
             onNodeSelectRef.current?.(nodeData.id)
             dispatch(selectEntity(nodeData.id))
+          } else if (nodeData.primary_type === 'Institution') {
+            onNodeSelectRef.current?.(nodeData.id)
+            dispatch(selectEntity(nodeData.id))
           }
         } else if (currentLevelRef.current === 'expanded-dm') {
           if (nodeData.primary_type === 'Mechanism') {
             onNodeSelectRef.current?.(nodeData.id)
             dispatch(selectEntity(nodeData.id))
           } else if (nodeData.primary_type === 'Decision Maker') {
+            onNodeSelectRef.current?.(nodeData.id)
+            dispatch(selectEntity(nodeData.id))
+          } else if (nodeData.primary_type === 'Institution') {
             onNodeSelectRef.current?.(nodeData.id)
             dispatch(selectEntity(nodeData.id))
           }
@@ -1376,8 +1605,12 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
 
         if (currentLevelRef.current === 'expanded' && nodeData.primary_type === 'Decision Maker') {
           renderExpandedDmRef.current(nodeData.id)
+        } else if (currentLevelRef.current === 'expanded' && nodeData.primary_type === 'Institution') {
+          renderExpandedInstitutionRef.current(nodeData.id)
         } else if (currentLevelRef.current === 'expanded-dm' && nodeData.primary_type === 'Mechanism') {
           renderExpandedRef.current(nodeData.id)
+        } else if (currentLevelRef.current === 'expanded-dm' && nodeData.primary_type === 'Institution') {
+          renderExpandedInstitutionRef.current(nodeData.id)
         } else if (currentLevelRef.current === 'expanded-institution' && nodeData.primary_type === 'Decision Maker') {
           renderExpandedDmRef.current(nodeData.id)
         } else if (currentLevelRef.current === 'expanded-institution' && nodeData.primary_type === 'Mechanism') {

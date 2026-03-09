@@ -5,7 +5,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import type { InstitutionDetail } from '../../types/models'
 import { buildInstitutionColors } from '../../utils/entities'
-import { useBrowseData } from '../../views/Browse'
+import { useBrowseData } from '../../contexts/BrowseDataContext'
 
 interface Props {
   entity: InstitutionDetail
