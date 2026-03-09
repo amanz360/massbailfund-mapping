@@ -884,6 +884,39 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         })
       }
 
+      // Add invisible gravity edges from mechanisms to institutions.
+      // For each mechanism, count how many of its DMs belong to each institution
+      // (using the same "best institution" heuristic). This lets fcose naturally
+      // position mechanisms between the institutions their DMs belong to.
+      const mechNodes = data.nodes.filter((n) => n.primary_type === 'Mechanism')
+      for (const mech of mechNodes) {
+        // Count DMs per institution for this mechanism
+        const instAffinity = new Map<string, number>()
+        for (const edge of data.edges) {
+          const dmId = edge.source === mech.id ? edge.target : edge.target === mech.id ? edge.source : null
+          if (!dmId) continue
+          const dmNode = data.nodes.find((n) => n.id === dmId)
+          if (dmNode?.primary_type !== 'Decision Maker') continue
+          const bestInst = dmBestInst.get(dmId)
+          if (bestInst) {
+            const instId = bestInst.membership.institution
+            instAffinity.set(instId, (instAffinity.get(instId) ?? 0) + 1)
+          }
+        }
+        // Add an invisible edge to each institution with affinity > 0
+        for (const [instId, count] of instAffinity) {
+          elements.push({
+            data: {
+              id: `gravity-${mech.id}-${instId}`,
+              source: mech.id,
+              target: instId,
+              _gravityWeight: count,
+            },
+            classes: 'gravity-edge',
+          })
+        }
+      }
+
       return { elements, positions }
     },
     [],
@@ -1254,10 +1287,16 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       // Short membership edges pull DMs close to institutions;
       // long mechanism edges push mechanisms to the outer ring
       idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
+        if (edge.hasClass('gravity-edge')) return 120 // pull mechanisms toward institutions
         if (edge.hasClass('membership-edge')) return 80
-        return 150 // mechanism↔DM edges — longer than membership to push outward
+        return 150 // mechanism↔DM edges
       },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
+        if (edge.hasClass('gravity-edge')) {
+          // Stronger pull for higher affinity (more DMs in that institution)
+          const weight = edge.data('_gravityWeight') ?? 1
+          return 0.3 + 0.15 * weight
+        }
         if (edge.hasClass('membership-edge')) {
           // Find which endpoint is the institution
           const srcType = edge.source().data('primary_type')
@@ -1266,7 +1305,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           // Smaller institution → higher elasticity (stronger pull)
           return 0.2 + 0.6 * (1 - count / maxMembers)
         }
-        return 0.25 // weaker pull for mechanism edges — let them float outward
+        return 0.25 // weaker pull for mechanism edges
       },
       gravity: 0.15,
       gravityRange: 3.8,
@@ -1619,7 +1658,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
 
       cy.on('mouseover', 'edge', (evt) => {
-        if (currentLevelRef.current === 'landing') {
+        if (currentLevelRef.current === 'landing' && !evt.target.hasClass('gravity-edge')) {
           evt.target.addClass('hover-edge')
         }
       })
@@ -1653,6 +1692,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
           })
           cy.edges().forEach((e) => {
+            if (e.hasClass('gravity-edge')) return // never show gravity edges
             const src = e.data('source')
             const tgt = e.data('target')
             if (e.hasClass('membership-edge')) {
@@ -1690,6 +1730,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
           })
           cy.edges().forEach((e) => {
+            if (e.hasClass('gravity-edge')) return // never show gravity edges
             const src = e.data('source')
             const tgt = e.data('target')
             if (e.hasClass('membership-edge')) {
