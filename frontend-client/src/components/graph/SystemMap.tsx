@@ -2033,7 +2033,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           return
         }
 
-        const connectedEdges = node.connectedEdges().filter((e) => !e.hasClass('gravity-edge') && !e.hasClass('hidden-membership-edge'))
+        const connectedEdges = node.connectedEdges().filter((e: cytoscape.EdgeSingular) => !e.hasClass('gravity-edge') && !e.hasClass('hidden-membership-edge'))
         const connectedNodes = connectedEdges.connectedNodes()
 
         cy.elements().addClass('dimmed')
