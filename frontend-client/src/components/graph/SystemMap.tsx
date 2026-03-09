@@ -883,6 +883,21 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           classes: 'membership-edge',
         })
       }
+      // Secondary membership edges (non-best primary memberships) — hidden but affect layout
+      for (const m of data.memberships) {
+        if (m.membership_type !== 'Primary') continue
+        const best = dmBestInst.get(m.member)
+        if (best && best.membership.id === m.id) continue
+        elements.push({
+          data: {
+            id: `landing-membership-hidden-${m.id}`,
+            source: m.member,
+            target: m.institution,
+            relationship_type: m.membership_type,
+          },
+          classes: 'hidden-membership-edge',
+        })
+      }
 
       // Add invisible gravity edges from mechanisms to institutions.
       // For each mechanism, count how many of its DMs belong to each institution
@@ -1283,7 +1298,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       animate: true,
       animationDuration: 800,
       quality: 'default',
-      nodeRepulsion: () => 18000,
+      nodeRepulsion: () => 25000,
       // Short membership edges pull DMs close to institutions;
       // long mechanism edges push mechanisms to the outer ring
       idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
@@ -1292,7 +1307,8 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           const weight = edge.data('_gravityWeight') ?? 1
           return Math.max(60, 180 - 40 * weight)
         }
-        if (edge.hasClass('membership-edge')) return 100
+        if (edge.hasClass('membership-edge')) return 10
+        if (edge.hasClass('hidden-membership-edge')) return 160 // secondary membership length
         return 140 // mechanism↔DM edges
       },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
@@ -1301,6 +1317,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           const weight = edge.data('_gravityWeight') ?? 1
           return 0.2 + 0.1 * weight
         }
+        if (edge.hasClass('hidden-membership-edge')) return 0.2 // secondary membership pull
         if (edge.hasClass('membership-edge')) {
           // Find which endpoint is the institution
           const srcType = edge.source().data('primary_type')
@@ -1749,6 +1766,45 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           return
         }
 
+        // DM hover on landing: highlight connected mechanisms + all primary institutions
+        if (data && node.data('primary_type') === 'Decision Maker' && currentLevelRef.current === 'landing') {
+          const dmId = node.id()
+          // Find connected mechanisms
+          const mechIds = new Set(
+            data.edges
+              .filter((e) => e.source === dmId || e.target === dmId)
+              .flatMap((e) => [e.source, e.target])
+              .filter((id) => id !== dmId && data.nodes.find((n) => n.id === id)?.primary_type === 'Mechanism'),
+          )
+          // Find ALL primary institutions for this DM
+          const instIds = new Set(
+            data.memberships
+              .filter((m) => m.member === dmId && m.membership_type === 'Primary')
+              .map((m) => m.institution),
+          )
+          const relatedIds = new Set([dmId, ...mechIds, ...instIds])
+
+          cy.elements().addClass('dimmed')
+          cy.nodes().forEach((n) => {
+            if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
+          })
+          cy.edges().forEach((e) => {
+            if (e.hasClass('gravity-edge')) return
+            const src = e.data('source')
+            const tgt = e.data('target')
+            // Show both visible and hidden membership edges for this DM
+            if (e.hasClass('membership-edge') || e.hasClass('hidden-membership-edge')) {
+              if ((src === dmId && instIds.has(tgt)) || (tgt === dmId && instIds.has(src))) {
+                e.style({ opacity: 1, width: 1.5, 'target-arrow-shape': 'triangle' })
+                e.removeClass('dimmed').addClass('highlighted')
+              }
+            } else if ((src === dmId && mechIds.has(tgt)) || (tgt === dmId && mechIds.has(src))) {
+              e.removeClass('dimmed').addClass('highlighted')
+            }
+          })
+          return
+        }
+
         const connectedEdges = node.connectedEdges()
         const connectedNodes = connectedEdges.connectedNodes()
 
@@ -1759,7 +1815,11 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
 
       cy.on('mouseout', 'node', () => {
-        cyRef.current?.elements().removeClass('dimmed highlighted')
+        const c = cyRef.current
+        if (!c) return
+        c.elements().removeClass('dimmed highlighted')
+        // Re-hide hidden membership edges (inline styles set during DM hover)
+        c.edges('.hidden-membership-edge').style({ opacity: 0, width: 0, 'target-arrow-shape': 'none' })
       })
 
       // Background tap returns to landing from expanded views
