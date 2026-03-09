@@ -106,7 +106,7 @@ export default function BrowseIndex({
     <Box
       key={activeSection}
       sx={{
-        maxWidth: 960,
+        maxWidth: 1280,
         mx: 'auto',
         py: 4,
         px: 3,
@@ -173,7 +173,7 @@ function MechanismsSection({
             {subcategory}
           </Typography>
           <Masonry
-            breakpointCols={{ default: 2, 600: 1 }}
+            breakpointCols={{ default: 3, 900: 2, 600: 1 }}
             className="browse-masonry"
             columnClassName="browse-masonry-column"
           >
