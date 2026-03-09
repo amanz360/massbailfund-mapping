@@ -850,13 +850,29 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
               target: edge.target,
               relationship_type: edge.relationship_type,
             },
+            classes: 'landing-edge',
           })
         }
       }
 
-      // Add primary membership edges only (DM → Institution)
+      // For each DM, add only the single membership edge to the institution
+      // with the fewest primary members (same heuristic as border color).
+      // This creates decisive clustering — each DM is pulled into one neighborhood.
+      const instCounts = new Map<string, number>()
+      for (const m of data.memberships) {
+        if (m.membership_type === 'Primary') {
+          instCounts.set(m.institution, (instCounts.get(m.institution) ?? 0) + 1)
+        }
+      }
+      const dmBestInst = new Map<string, { membership: typeof data.memberships[0] }>()
       for (const m of data.memberships) {
         if (m.membership_type !== 'Primary') continue
+        const existing = dmBestInst.get(m.member)
+        if (!existing || (instCounts.get(m.institution) ?? Infinity) < (instCounts.get(existing.membership.institution) ?? Infinity)) {
+          dmBestInst.set(m.member, { membership: m })
+        }
+      }
+      for (const [, { membership: m }] of dmBestInst) {
         elements.push({
           data: {
             id: `landing-membership-${m.id}`,
@@ -1170,20 +1186,53 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
     const { elements } = buildLanding(graphData)
     cy.add(elements)
 
+    // Compute primary member counts per institution (used for DM border + edge elasticity)
+    const instMemberCount = new Map<string, number>()
+    for (const m of graphData.memberships) {
+      if (m.membership_type === 'Primary') {
+        instMemberCount.set(m.institution, (instMemberCount.get(m.institution) ?? 0) + 1)
+      }
+    }
+    const maxMembers = Math.max(...instMemberCount.values(), 1)
+
     // Apply institution dot indicators to DM nodes
     cy.nodes('[primary_type="Decision Maker"]').forEach((node) => {
       applyDotIndicators(node, graphData, institutionColors)
+
+      // Color DM border by primary institution with fewest members
+      // (same heuristic as edge elasticity — smaller institution = stronger affinity)
+      const primaryInsts = graphData.memberships
+        .filter((m) => m.member === node.id() && m.membership_type === 'Primary')
+        .map((m) => m.institution)
+      if (primaryInsts.length > 0) {
+        const bestInst = primaryInsts.reduce((best, id) =>
+          (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity) ? id : best,
+        )
+        const color = institutionColors.get(bestInst)
+        if (color) {
+          node.style({
+            'border-width': 2.5,
+            'border-color': color,
+          })
+        }
+      }
     })
 
-    // Apply institution colors to institution nodes
+    // Apply institution colors and enlarge institution nodes in landing view
     cy.nodes('[primary_type="Institution"]').forEach((node) => {
       const color = institutionColors.get(node.id()) || theme.palette.institution.main
-      node.style('background-color', color)
+      node.style({
+        'background-color': color,
+        width: '120px',
+        height: '120px',
+        'font-size': '13px',
+        'text-max-width': '90px',
+      })
     })
 
     // Pin institutions at evenly-spaced positions to anchor neighborhoods
     const institutions = cy.nodes('[primary_type="Institution"]')
-    const INST_RADIUS = 400
+    const INST_RADIUS = 380
     const fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[] = []
     institutions.forEach((node, i) => {
       const angle = (2 * Math.PI * i) / institutions.length - Math.PI / 2
@@ -1196,23 +1245,18 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
     })
 
-    // Compute primary member counts per institution so membership edges
-    // to smaller institutions pull harder (inversely proportional)
-    const instMemberCount = new Map<string, number>()
-    for (const m of graphData.memberships) {
-      if (m.membership_type === 'Primary') {
-        instMemberCount.set(m.institution, (instMemberCount.get(m.institution) ?? 0) + 1)
-      }
-    }
-    const maxMembers = Math.max(...instMemberCount.values(), 1)
-
     const layout = cy.layout({
       name: 'fcose',
       animate: true,
       animationDuration: 800,
       quality: 'default',
       nodeRepulsion: () => 6000,
-      idealEdgeLength: () => 140,
+      // Short membership edges pull DMs close to institutions;
+      // long mechanism edges push mechanisms to the outer ring
+      idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
+        if (edge.hasClass('membership-edge')) return 80
+        return 150 // mechanism↔DM edges — longer than membership to push outward
+      },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
         if (edge.hasClass('membership-edge')) {
           // Find which endpoint is the institution
@@ -1220,10 +1264,9 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           const instId = srcType === 'Institution' ? edge.source().id() : edge.target().id()
           const count = instMemberCount.get(instId) ?? 1
           // Smaller institution → higher elasticity (stronger pull)
-          // Scale from 0.8 (smallest) down to 0.1 (largest)
-          return 0.1 + 0.7 * (1 - count / maxMembers)
+          return 0.2 + 0.6 * (1 - count / maxMembers)
         }
-        return 0.45
+        return 0.25 // weaker pull for mechanism edges — let them float outward
       },
       gravity: 0.15,
       gravityRange: 3.8,
@@ -1235,7 +1278,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
     layoutRef.current = layout
     layout.run()
     layout.one('layoutstop', () => {
-      cy.fit(undefined, 40)
+      cy.fit(undefined, 15)
     })
     setCurrentLevel('landing')
 
@@ -1624,6 +1667,43 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           return
         }
 
+        // Mechanism hover on landing: highlight connected DMs + their primary institutions
+        if (data && node.data('primary_type') === 'Mechanism' && currentLevelRef.current === 'landing') {
+          const mechId = node.id()
+          // Find connected DMs
+          const dmIds = new Set(
+            data.edges
+              .filter((e) => e.source === mechId || e.target === mechId)
+              .flatMap((e) => [e.source, e.target])
+              .filter((id) => id !== mechId && data.nodes.find((n) => n.id === id)?.primary_type === 'Decision Maker'),
+          )
+          // Find primary institutions of those DMs
+          const instIds = new Set(
+            data.memberships
+              .filter((m) => dmIds.has(m.member) && m.membership_type === 'Primary')
+              .map((m) => m.institution),
+          )
+          const relatedIds = new Set([mechId, ...dmIds, ...instIds])
+
+          cy.elements().addClass('dimmed')
+          cy.nodes().forEach((n) => {
+            if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
+          })
+          cy.edges().forEach((e) => {
+            const src = e.data('source')
+            const tgt = e.data('target')
+            if (e.hasClass('membership-edge')) {
+              // Highlight membership edges between highlighted DMs and institutions
+              if ((dmIds.has(src) && instIds.has(tgt)) || (dmIds.has(tgt) && instIds.has(src))) {
+                e.removeClass('dimmed').addClass('highlighted')
+              }
+            } else if ((src === mechId && dmIds.has(tgt)) || (tgt === mechId && dmIds.has(src))) {
+              e.removeClass('dimmed').addClass('highlighted')
+            }
+          })
+          return
+        }
+
         const connectedEdges = node.connectedEdges()
         const connectedNodes = connectedEdges.connectedNodes()
 
@@ -1766,7 +1846,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mechanisms</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <Box sx={{ width: 11, height: 11, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', flexShrink: 0 }} />
+              <Box sx={{ width: 11, height: 11, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', border: '2px solid', borderColor: 'institution.main', flexShrink: 0 }} />
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>Decision Makers</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -1891,7 +1971,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           <Typography variant="caption" sx={{ color: '#333', lineHeight: 1.2 }}>Mechanism</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', flexShrink: 0 }} />
+          <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', border: '2px solid', borderColor: 'institution.main', flexShrink: 0 }} />
           <Typography variant="caption" sx={{ color: '#333', lineHeight: 1.2 }}>Decision Maker</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

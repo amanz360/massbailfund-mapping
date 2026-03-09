@@ -128,6 +128,14 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       opacity: 0.35,
     },
   },
+  // Landing view mechanism↔DM edges — subtle but visible
+  {
+    selector: 'edge.landing-edge',
+    style: {
+      opacity: 0.2,
+      'target-arrow-shape': 'none',
+    },
+  },
   // Edge hover — show label on mouseover
   {
     selector: 'edge.hover-edge',
