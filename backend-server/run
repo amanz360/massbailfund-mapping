@@ -4,5 +4,8 @@ if test -z "$PORT"; then
   PORT=8080
 fi
 
+echo "Running migrations"
+python manage.py migrate --noinput
+
 echo "Starting massbailfund"
 uwsgi --ini uwsgi.ini
