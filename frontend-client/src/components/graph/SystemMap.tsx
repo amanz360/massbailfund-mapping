@@ -7,7 +7,10 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import LinkIcon from '@mui/icons-material/Link'
 import { useDispatch, useSelector } from 'react-redux'
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape'
+import fcose from 'cytoscape-fcose'
 import type { AppDispatch } from '../../store/store'
+
+cytoscape.use(fcose)
 import { selectGraphData, selectGraphLoading } from '../../store/slices/graphSlice'
 import { selectEntity, clearDetail } from '../../store/slices/detailSlice'
 import type { GraphData, GraphNode, GraphEdge } from '../../types/models'
@@ -819,7 +822,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         })
       }
 
-      // Add institution nodes (floating, no edges on landing)
+      // Add institution nodes
       for (const node of data.nodes) {
         if (node.primary_type !== 'Institution') continue
         elements.push({
@@ -849,6 +852,20 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             },
           })
         }
+      }
+
+      // Add primary membership edges only (DM → Institution)
+      for (const m of data.memberships) {
+        if (m.membership_type !== 'Primary') continue
+        elements.push({
+          data: {
+            id: `landing-membership-${m.id}`,
+            source: m.member,
+            target: m.institution,
+            relationship_type: m.membership_type,
+          },
+          classes: 'membership-edge',
+        })
       }
 
       return { elements, positions }
@@ -1150,7 +1167,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
     cy.elements().remove()
     cy.resize()
 
-    const { elements, positions } = buildLanding(graphData)
+    const { elements } = buildLanding(graphData)
     cy.add(elements)
 
     // Apply institution dot indicators to DM nodes
@@ -1164,19 +1181,62 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       node.style('background-color', color)
     })
 
-    // Center viewport on origin so nodes expand outward from center
-    cy.zoom(1)
-    cy.center()
+    // Pin institutions at evenly-spaced positions to anchor neighborhoods
+    const institutions = cy.nodes('[primary_type="Institution"]')
+    const INST_RADIUS = 400
+    const fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[] = []
+    institutions.forEach((node, i) => {
+      const angle = (2 * Math.PI * i) / institutions.length - Math.PI / 2
+      fixedNodeConstraint.push({
+        nodeId: node.id(),
+        position: {
+          x: Math.cos(angle) * INST_RADIUS,
+          y: Math.sin(angle) * INST_RADIUS,
+        },
+      })
+    })
+
+    // Compute primary member counts per institution so membership edges
+    // to smaller institutions pull harder (inversely proportional)
+    const instMemberCount = new Map<string, number>()
+    for (const m of graphData.memberships) {
+      if (m.membership_type === 'Primary') {
+        instMemberCount.set(m.institution, (instMemberCount.get(m.institution) ?? 0) + 1)
+      }
+    }
+    const maxMembers = Math.max(...instMemberCount.values(), 1)
 
     const layout = cy.layout({
-      name: 'preset',
-      positions: (node: cytoscape.NodeSingular) => positions.get(node.id()),
+      name: 'fcose',
       animate: true,
       animationDuration: 800,
-      animationEasing: 'ease-out-cubic',
+      quality: 'default',
+      nodeRepulsion: () => 6000,
+      idealEdgeLength: () => 140,
+      edgeElasticity: (edge: cytoscape.EdgeSingular) => {
+        if (edge.hasClass('membership-edge')) {
+          // Find which endpoint is the institution
+          const srcType = edge.source().data('primary_type')
+          const instId = srcType === 'Institution' ? edge.source().id() : edge.target().id()
+          const count = instMemberCount.get(instId) ?? 1
+          // Smaller institution → higher elasticity (stronger pull)
+          // Scale from 0.8 (smallest) down to 0.1 (largest)
+          return 0.1 + 0.7 * (1 - count / maxMembers)
+        }
+        return 0.45
+      },
+      gravity: 0.15,
+      gravityRange: 3.8,
+      numIter: 2500,
+      nodeDimensionsIncludeLabels: true,
+      padding: 50,
+      fixedNodeConstraint,
     } as cytoscape.LayoutOptions)
     layoutRef.current = layout
     layout.run()
+    layout.one('layoutstop', () => {
+      cy.fit(undefined, 40)
+    })
     setCurrentLevel('landing')
 
     setExpandedMechanismId(null)
@@ -1552,7 +1612,12 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           cy.edges().forEach((e) => {
             const src = e.data('source')
             const tgt = e.data('target')
-            if ((memberIds.has(src) || memberIds.has(tgt)) && (mechIds.has(src) || mechIds.has(tgt))) {
+            if (e.hasClass('membership-edge')) {
+              // Only highlight membership edges TO this institution
+              if (src === instId || tgt === instId) {
+                e.removeClass('dimmed').addClass('highlighted')
+              }
+            } else if ((memberIds.has(src) || memberIds.has(tgt)) && (mechIds.has(src) || mechIds.has(tgt))) {
               e.removeClass('dimmed').addClass('highlighted')
             }
           })
