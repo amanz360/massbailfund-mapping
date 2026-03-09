@@ -21,53 +21,43 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'border-width': 0,
     },
   },
-  // Decision Maker nodes (dark navy)
+  // Decision Maker nodes (diamond — flowchart decision symbol)
   {
     selector: 'node[primary_type="Decision Maker"]',
     style: {
       'background-color': '#000F35',
-      shape: 'roundrectangle',
-      label: 'data(name)',
-      'font-family': '"Source Sans 3", sans-serif',
-      'text-valign': 'center',
-      'text-halign': 'center',
-      'text-wrap': 'wrap',
-      'text-max-width': '120px',
-      'font-size': '11px',
-      'font-weight': 600,
-      color: '#ffffff',
-      width: '130px',
-      height: '50px',
-      'border-width': 0,
-    },
-  },
-  // High-connectivity Decision Maker nodes — scaled up
-  {
-    selector: 'node[primary_type="Decision Maker"][?highConnectivity]',
-    style: {
-      width: '160px',
-      height: '60px',
-      'font-size': '12px',
-      'text-max-width': '140px',
-    },
-  },
-  // Institution nodes (diamond shape)
-  {
-    selector: 'node[primary_type="Institution"]',
-    style: {
-      'background-color': '#4A5568',
       shape: 'diamond',
       label: 'data(name)',
       'font-family': '"Source Sans 3", sans-serif',
       'text-valign': 'center',
       'text-halign': 'center',
       'text-wrap': 'wrap',
-      'text-max-width': '100px',
+      'text-max-width': '90px',
+      'font-size': '11px',
+      'font-weight': 600,
+      color: '#ffffff',
+      width: '140px',
+      height: '100px',
+      'border-width': 0,
+    },
+  },
+  // Institution nodes (circle — reinforces membership dot indicators)
+  {
+    selector: 'node[primary_type="Institution"]',
+    style: {
+      'background-color': '#4A5568',
+      shape: 'ellipse',
+      label: 'data(name)',
+      'font-family': '"Source Sans 3", sans-serif',
+      'text-valign': 'center',
+      'text-halign': 'center',
+      'text-wrap': 'wrap',
+      'text-max-width': '75px',
       'font-size': '11px',
       'font-weight': 700,
       color: '#ffffff',
-      width: '110px',
-      height: '80px',
+      width: '95px',
+      height: '95px',
       'border-width': 2,
       'border-color': '#ffffff',
     },
@@ -76,11 +66,11 @@ export const cytoscapeStyles: StylesheetStyle[] = [
   {
     selector: 'node.center-institution',
     style: {
-      width: '150px',
-      height: '110px',
-      'font-size': '14px',
+      width: '130px',
+      height: '130px',
+      'font-size': '13px',
       'font-weight': 700,
-      'text-max-width': '130px',
+      'text-max-width': '95px',
     },
   },
   // Center mechanism in expanded view
@@ -104,10 +94,10 @@ export const cytoscapeStyles: StylesheetStyle[] = [
     selector: 'node.center-dm',
     style: {
       width: '180px',
-      height: '65px',
+      height: '130px',
       'font-size': '13px',
       'font-weight': 700,
-      'text-max-width': '160px',
+      'text-max-width': '110px',
     },
   },
   // Clicked DM in expanded view

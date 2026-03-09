@@ -60,13 +60,15 @@ function applyDotIndicators(node: cytoscape.NodeSingular, data: GraphData, insti
   const widths = uris.map(() => sz)
   const heights = uris.map(() => sz)
 
-  // Stack dots in the top-right corner
+  // Center dots inside the diamond, just above the label text
   const pos_x: string[] = []
   const pos_y: string[] = []
+  const totalWidth = uris.length * DOT_SIZE + (uris.length - 1) * 2 // 2px gap between dots
+  const startX = 50 - (totalWidth / 2 / 140) * 100 // 140px = DM diamond width
   for (let i = 0; i < uris.length; i++) {
-    // Right-aligned, spaced 12px apart from the right edge
-    pos_x.push(`${100 - (uris.length - 1 - i) * 12}%`)
-    pos_y.push('0%')
+    const offsetPx = i * (DOT_SIZE + 2)
+    pos_x.push(`${startX + (offsetPx / 140) * 100}%`)
+    pos_y.push('18%')
   }
 
   node.style({
@@ -156,26 +158,6 @@ function hashCode(s: string): number {
     h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
   }
   return h
-}
-
-/**
- * Compute how many mechanism edges each decision maker has.
- * Used to set highConnectivity flag for visual scaling.
- */
-function computeDmConnectionCounts(data: GraphData): Map<string, number> {
-  const mechanismIds = new Set(
-    data.nodes.filter((n) => n.primary_type === 'Mechanism').map((n) => n.id),
-  )
-  const counts = new Map<string, number>()
-  for (const edge of data.edges) {
-    if (mechanismIds.has(edge.source) && !mechanismIds.has(edge.target)) {
-      counts.set(edge.target, (counts.get(edge.target) ?? 0) + 1)
-    }
-    if (mechanismIds.has(edge.target) && !mechanismIds.has(edge.source)) {
-      counts.set(edge.source, (counts.get(edge.source) ?? 0) + 1)
-    }
-  }
-  return counts
 }
 
 /**
@@ -369,7 +351,7 @@ function computeInstitutionExpandedPositions(
 
   // DMs on inner ring
   const DM_COUNT = orderedDmIds.length
-  const DM_RADIUS = Math.max(200, DM_COUNT * 22)
+  const DM_RADIUS = Math.max(220, DM_COUNT * 28)
   const dmAngles = new Map<string, number>()
 
   for (let i = 0; i < DM_COUNT; i++) {
@@ -516,8 +498,8 @@ function computeMechanismExpandedPositions(
   positions.set(mechanismId, { x: 250, y: 0 })
 
   // --- DMs in vertical stack at center ---
-  // Scale spacing down for large DM counts to keep the stack compact
-  const DM_SPACING = DM_COUNT <= 4 ? 80 : Math.max(60, Math.ceil(320 / DM_COUNT))
+  // DM diamonds are 100px tall; scale spacing for large counts
+  const DM_SPACING = DM_COUNT <= 4 ? 120 : Math.max(110, Math.ceil(480 / DM_COUNT))
   const dmTotalHeight = (DM_COUNT - 1) * DM_SPACING
   for (let i = 0; i < DM_COUNT; i++) {
     positions.set(dmIds[i], {
@@ -546,7 +528,7 @@ function computeMechanismExpandedPositions(
       instPositions.push({ id: instId, y: avgY })
     }
 
-    // Sort by y and resolve collisions (institution diamonds are ~82px tall)
+    // Sort by y and resolve collisions (institution circles are ~95px)
     instPositions.sort((a, b) => a.y - b.y)
     const MIN_INST_DIST = 100
     for (let iter = 0; iter < 20; iter++) {
@@ -627,7 +609,7 @@ function computeDmExpandedPositions(
     if (INST_COUNT === 1) {
       positions.set(instIds[0], { x: -INST_RADIUS, y: 0 })
     } else {
-      // Spread vertically on the left — institution diamonds are ~82px tall
+      // Spread vertically on the left — institution circles are ~95px
       const instSpacing = 120
       const totalHeight = (INST_COUNT - 1) * instSpacing
       for (let i = 0; i < INST_COUNT; i++) {
@@ -757,8 +739,8 @@ function computeCircularPositions(
           dy = b.y - a.y
           dist = Math.sqrt(dx * dx + dy * dy)
         }
-        // Inner DMs are high-connectivity (larger nodes), need more spacing
-        const minDist = (a.inner && b.inner) ? 170 : 150
+        // DM diamonds are taller; inner DMs (high-connectivity) need more spacing
+        const minDist = (a.inner && b.inner) ? 190 : 170
         if (dist < minDist) {
           const push = (minDist - dist) / 2
           const nx = dx / dist
@@ -778,7 +760,7 @@ function computeCircularPositions(
         const dx = dp.x - mp.x
         const dy = dp.y - mp.y
         const dist = Math.sqrt(dx * dx + dy * dy)
-        const minDist = 150
+        const minDist = 170
         if (dist > 0 && dist < minDist) {
           const push = minDist - dist
           const nx = dx / dist
@@ -880,7 +862,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
   const buildLanding = useCallback(
     (data: GraphData): { elements: ElementDefinition[]; positions: Map<string, { x: number; y: number }> } => {
       const elements: ElementDefinition[] = []
-      const dmCounts = computeDmConnectionCounts(data)
 
       const mechanisms = data.nodes.filter((n) => n.primary_type === 'Mechanism')
       const orderedMechs = orderMechanismsForCircle(mechanisms, data.edges)
@@ -902,14 +883,12 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       // Add decision maker nodes
       for (const node of data.nodes) {
         if (node.primary_type !== 'Decision Maker') continue
-        const connCount = dmCounts.get(node.id) ?? 0
         elements.push({
           data: {
             id: node.id,
             name: node.name,
             primary_type: node.primary_type,
             secondary_type: node.secondary_type,
-            highConnectivity: connCount >= 5 ? true : undefined,
           },
           position: { x: 0, y: 0 },
         })
@@ -956,7 +935,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
   const buildExpanded = useCallback(
     (data: GraphData, mechanismId: string): ElementDefinition[] => {
       const elements: ElementDefinition[] = []
-      const dmCounts = computeDmConnectionCounts(data)
 
       const mechanism = data.nodes.find((n) => n.id === mechanismId)
       if (!mechanism) return elements
@@ -993,7 +971,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       for (const dmId of connectedDmIds) {
         const dm = data.nodes.find((n) => n.id === dmId)
         if (!dm) continue
-        const connCount = dmCounts.get(dmId) ?? 0
         elements.push({
           data: {
             id: dm.id,
@@ -1057,12 +1034,10 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
   const buildExpandedDm = useCallback(
     (data: GraphData, dmId: string): ElementDefinition[] => {
       const elements: ElementDefinition[] = []
-      const dmCounts = computeDmConnectionCounts(data)
 
       const dm = data.nodes.find((n) => n.id === dmId)
       if (!dm) return elements
 
-      const connCount = dmCounts.get(dmId) ?? 0
       elements.push({
         data: {
           id: dm.id,
@@ -1151,7 +1126,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
   const buildExpandedInstitution = useCallback(
     (data: GraphData, institutionId: string): ElementDefinition[] => {
       const elements: ElementDefinition[] = []
-      const dmCounts = computeDmConnectionCounts(data)
 
       const institution = data.nodes.find((n) => n.id === institutionId)
       if (!institution) return elements
@@ -1175,7 +1149,6 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       for (const dmId of primaryDmIds) {
         const dm = data.nodes.find((n) => n.id === dmId)
         if (!dm) continue
-        const connCount = dmCounts.get(dmId) ?? 0
         elements.push({
           data: {
             id: dm.id,
@@ -1800,15 +1773,15 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, backgroundColor: 'primary.main', flexShrink: 0 }} />
+              <Box sx={{ width: 14, height: 9, borderRadius: 0.5, backgroundColor: 'primary.main', flexShrink: 0 }} />
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mechanisms</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, backgroundColor: 'secondary.main', flexShrink: 0 }} />
+              <Box sx={{ width: 11, height: 11, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', flexShrink: 0 }} />
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>Decision Makers</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: 'institution.main', flexShrink: 0 }} />
+              <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: 'institution.main', flexShrink: 0 }} />
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>Institutions</Typography>
             </Box>
           </Box>
@@ -1925,15 +1898,15 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ width: 14, height: 14, borderRadius: 0.5, backgroundColor: 'primary.main', flexShrink: 0 }} />
+          <Box sx={{ width: 16, height: 10, borderRadius: 0.5, backgroundColor: 'primary.main', flexShrink: 0 }} />
           <Typography variant="caption" sx={{ color: '#333', lineHeight: 1.2 }}>Mechanism</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ width: 14, height: 14, borderRadius: 0.5, backgroundColor: 'secondary.main', flexShrink: 0 }} />
+          <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', flexShrink: 0 }} />
           <Typography variant="caption" sx={{ color: '#333', lineHeight: 1.2 }}>Decision Maker</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: 'institution.main', flexShrink: 0 }} />
+          <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: 'institution.main', flexShrink: 0 }} />
           <Typography variant="caption" sx={{ color: '#333', lineHeight: 1.2 }}>Institution</Typography>
         </Box>
         <Box sx={{ mt: 0.75, borderTop: '1px solid', borderColor: 'divider', pt: 0.75 }}>
