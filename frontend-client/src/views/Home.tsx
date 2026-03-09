@@ -132,7 +132,7 @@ export default function Home() {
             zIndex: { xs: 10, md: 'auto' },
           }}
         >
-          <DetailPanel onClose={handleClose} onNavigate={handleSearchSelect} expandedMechanismId={expandedMechanismId} expandedDmId={expandedDmId} expandedInstitutionId={expandedInstitutionId} />
+          <DetailPanel onClose={handleClose} onNavigate={handleSearchSelect} expandedMechanismId={expandedMechanismId} />
         </Box>
       </Slide>
     </Box>

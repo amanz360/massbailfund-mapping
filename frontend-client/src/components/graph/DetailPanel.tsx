@@ -16,11 +16,9 @@ interface DetailPanelProps {
   onClose?: () => void
   onNavigate?: (nodeId: string) => void
   expandedMechanismId?: string | null
-  expandedDmId?: string | null
-  expandedInstitutionId?: string | null
 }
 
-export default function DetailPanel({ onClose, onNavigate, expandedMechanismId, expandedDmId, expandedInstitutionId }: DetailPanelProps) {
+export default function DetailPanel({ onClose, onNavigate, expandedMechanismId }: DetailPanelProps) {
   const theme = useTheme()
   const dispatch = useDispatch()
   const selectedId = useSelector(selectSelectedEntityId)
