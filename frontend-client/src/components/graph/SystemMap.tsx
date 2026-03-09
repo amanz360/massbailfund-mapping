@@ -1844,7 +1844,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
 
       cy.on('mouseover', 'edge', (evt) => {
-        if (currentLevelRef.current === 'landing' && !evt.target.hasClass('gravity-edge')) {
+        if (currentLevelRef.current === 'landing' && !evt.target.hasClass('gravity-edge') && !evt.target.hasClass('hidden-membership-edge')) {
           evt.target.addClass('hover-edge')
         }
       })
@@ -1878,7 +1878,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
           })
           cy.edges().forEach((e) => {
-            if (e.hasClass('gravity-edge')) return // never show gravity edges
+            if (e.hasClass('gravity-edge') || e.hasClass('hidden-membership-edge')) return
             const src = e.data('source')
             const tgt = e.data('target')
             if (e.hasClass('membership-edge')) {
@@ -1916,7 +1916,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
           })
           cy.edges().forEach((e) => {
-            if (e.hasClass('gravity-edge')) return // never show gravity edges
+            if (e.hasClass('gravity-edge') || e.hasClass('hidden-membership-edge')) return
             const src = e.data('source')
             const tgt = e.data('target')
             if (e.hasClass('membership-edge')) {
@@ -1960,7 +1960,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
             // Show both visible and hidden membership edges for this DM
             if (e.hasClass('membership-edge') || e.hasClass('hidden-membership-edge')) {
               if ((src === dmId && instIds.has(tgt)) || (tgt === dmId && instIds.has(src))) {
-                e.style({ opacity: 1, width: 1.5, 'target-arrow-shape': 'triangle' })
+                if (e.hasClass('hidden-membership-edge')) e.addClass('revealed')
                 e.removeClass('dimmed').addClass('highlighted')
               }
             } else if ((src === dmId && mechIds.has(tgt)) || (tgt === dmId && mechIds.has(src))) {
@@ -1970,7 +1970,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           return
         }
 
-        const connectedEdges = node.connectedEdges()
+        const connectedEdges = node.connectedEdges().filter((e) => !e.hasClass('gravity-edge') && !e.hasClass('hidden-membership-edge'))
         const connectedNodes = connectedEdges.connectedNodes()
 
         cy.elements().addClass('dimmed')
@@ -1983,8 +1983,8 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         const c = cyRef.current
         if (!c) return
         c.elements().removeClass('dimmed highlighted')
-        // Re-hide hidden membership edges (inline styles set during DM hover)
-        c.edges('.hidden-membership-edge').style({ opacity: 0, width: 0, 'target-arrow-shape': 'none' })
+        // Remove revealed class so hidden membership edges go back to invisible
+        c.edges('.hidden-membership-edge').removeClass('revealed')
       })
 
       // Background tap returns to landing from expanded views

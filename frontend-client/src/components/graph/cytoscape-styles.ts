@@ -138,6 +138,17 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'events': 'no',
     },
   },
+  // Revealed hidden membership edges (during DM hover)
+  {
+    selector: 'edge.hidden-membership-edge.revealed',
+    style: {
+      opacity: 1,
+      width: 1.5,
+      'target-arrow-shape': 'triangle',
+      'line-style': 'dashed',
+      'line-dash-pattern': [6, 4] as never,
+    },
+  },
   // Invisible gravity edges (mechanism→institution) — layout only, never rendered
   {
     selector: 'edge.gravity-edge',
