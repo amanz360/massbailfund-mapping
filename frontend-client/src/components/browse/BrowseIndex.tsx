@@ -347,7 +347,12 @@ function DecisionMakersSection({
               <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
                 {items.map((dm, idx) => {
                   const roleCount = dmRoleCounts.get(dm.id) ?? 0
-                  const memberships = dmInstitutions.get(dm.id) ?? []
+                  // Sort memberships: smallest institution first, largest (EO) rightmost
+                  const memberships = [...(dmInstitutions.get(dm.id) ?? [])].sort((a, b) => {
+                    const aCount = institutions.find((i) => i.id === a.instId)?.memberCount ?? 0
+                    const bCount = institutions.find((i) => i.id === b.instId)?.memberCount ?? 0
+                    return aCount - bCount
+                  })
                   return (
                     <Box
                       component="li"
