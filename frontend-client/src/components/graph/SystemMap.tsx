@@ -1368,6 +1368,7 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
     }
     // Seed mechanisms: average connected DM positions, then fan out by institution set
+    const CORRIDOR_PUSH = 120 // pixels to push mechanisms away from missing institutions
     const MECH_SPREAD = 40 // perpendicular spacing between mechanisms in the same corridor
     const mechCorridors = new Map<string, { center: { x: number; y: number }; direction: { dx: number; dy: number }; nodes: cytoscape.NodeSingular[] }>()
     cy.nodes('[primary_type="Mechanism"]').forEach((node) => {
@@ -1385,17 +1386,27 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       ax /= connectedDMs.length
       ay /= connectedDMs.length
 
-      // Push outward from center — fewer institutions = further out
+      // Push away from missing institutions — corridor mechanisms separate
+      // by moving away from institutions they DON'T connect to
       const gravityEdges = node.connectedEdges('.gravity-edge')
-      const numInst = gravityEdges.length
-      const pushFactor = numInst <= 1 ? 1.4 : numInst === 2 ? 1.15 : 1.0
-      ax *= pushFactor
-      ay *= pushFactor
-
-      // Group by sorted institution affinity set
       const instIds = gravityEdges.map((e) =>
         e.source().id() === node.id() ? e.target().id() : e.source().id()
       ).sort()
+      const connectedInstSet = new Set(instIds)
+      const allInstNodeIds = Array.from(instPositions.keys())
+      const missingInsts = allInstNodeIds.filter((id) => !connectedInstSet.has(id))
+      const numInst = instIds.length
+      if (missingInsts.length > 0 && missingInsts.length < allInstNodeIds.length) {
+        let mx = 0, my = 0
+        missingInsts.forEach((id) => { const p = instPositions.get(id)!; mx += p.x; my += p.y })
+        mx /= missingInsts.length; my /= missingInsts.length
+        const pushDx = ax - mx, pushDy = ay - my
+        const pushMag = Math.sqrt(pushDx * pushDx + pushDy * pushDy) || 1
+        ax += (pushDx / pushMag) * CORRIDOR_PUSH
+        ay += (pushDy / pushMag) * CORRIDOR_PUSH
+      }
+      // Mark corridor mechanisms (dual-institution) for longer edge lengths
+      node.data('_numInst', numInst)
       const corridorKey = instIds.join(',')
 
       if (!mechCorridors.has(corridorKey)) {
@@ -1444,10 +1455,21 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         })
         ax /= totalW || 1
         ay /= totalW || 1
-        const numInst = gravityEdges.length
-        const pushFactor = numInst <= 1 ? 1.4 : numInst === 2 ? 1.15 : 1.0
-        ax *= pushFactor
-        ay *= pushFactor
+
+        // Push away from missing institutions — corridor separation
+        const connectedInstSet = new Set<string>()
+        instWeights.forEach((_w, instId) => connectedInstSet.add(instId))
+        const allInstNodeIds = Array.from(instPositions.keys())
+        const missingInsts = allInstNodeIds.filter((id) => !connectedInstSet.has(id))
+        if (missingInsts.length > 0 && missingInsts.length < allInstNodeIds.length) {
+          let mx = 0, my = 0
+          missingInsts.forEach((id) => { const p = instPositions.get(id)!; mx += p.x; my += p.y })
+          mx /= missingInsts.length; my /= missingInsts.length
+          const pushDx = ax - mx, pushDy = ay - my
+          const pushMag = Math.sqrt(pushDx * pushDx + pushDy * pushDy) || 1
+          ax += (pushDx / pushMag) * CORRIDOR_PUSH
+          ay += (pushDy / pushMag) * CORRIDOR_PUSH
+        }
 
         const perpOffset = (i - (nodes.length - 1) / 2) * MECH_SPREAD
         node.position({
@@ -1457,13 +1479,46 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       })
     }
 
+    // Build relative placement constraints from corridor data.
+    // Constrain all non-center corridors to maintain left/right ordering.
+    // Tri-institution (center) mechanisms are excluded — they float freely.
+    const relativePlacementConstraint: { left: string; right: string; gap?: number }[] = []
+    const constrainedCorridors: { avgX: number; nodes: cytoscape.NodeSingular[] }[] = []
+    for (const [key, { nodes }] of mechCorridors) {
+      if (key.split(',').length === 3) continue // skip tri-institution — let center float
+      const avgX = nodes.reduce((s, n) => s + n.position('x'), 0) / nodes.length
+      constrainedCorridors.push({ avgX, nodes })
+    }
+    constrainedCorridors.sort((a, b) => a.avgX - b.avgX)
+    for (let i = 0; i < constrainedCorridors.length; i++) {
+      for (let j = i + 1; j < constrainedCorridors.length; j++) {
+        if (constrainedCorridors[j].avgX - constrainedCorridors[i].avgX < 30) continue
+        for (const leftNode of constrainedCorridors[i].nodes) {
+          for (const rightNode of constrainedCorridors[j].nodes) {
+            relativePlacementConstraint.push({
+              left: leftNode.id(),
+              right: rightNode.id(),
+            })
+          }
+        }
+      }
+    }
+    // Track tri-institution mechanism IDs for per-node repulsion
+    const triInstMechIds = new Set<string>()
+    for (const [key, { nodes }] of mechCorridors) {
+      if (key.split(',').length === 3) {
+        nodes.forEach((n) => triInstMechIds.add(n.id()))
+      }
+    }
+
     const layout = cy.layout({
       name: 'fcose',
       randomize: false,
       animate: true,
       animationDuration: 800,
-      quality: 'default',
-      nodeRepulsion: () => 25000,
+      quality: 'proof',
+      nodeRepulsion: (node: cytoscape.NodeSingular) =>
+        triInstMechIds.has(node.id()) ? 60000 : 25000,
       // Short membership edges pull DMs close to institutions;
       // long mechanism edges push mechanisms to the outer ring
       idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
@@ -1474,6 +1529,9 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
         }
         if (edge.hasClass('membership-edge')) return 50
         if (edge.hasClass('hidden-membership-edge')) return 160 // secondary membership length
+        // Corridor mechanisms get longer edges — more slack to sit in their corridor
+        const mechNode = edge.connectedNodes('[primary_type="Mechanism"]')[0]
+        if (mechNode && mechNode.data('_numInst') === 2) return 240
         return 180 // mechanism↔DM edges
       },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
@@ -1491,14 +1549,19 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
           // Smaller institution → higher elasticity (stronger pull)
           return 0.2 + .3 * (1 - count / maxMembers)
         }
+        // Corridor mechanisms: weaker spring — more freedom to sit in corridor
+        const mechN = edge.connectedNodes('[primary_type="Mechanism"]')[0]
+        if (mechN && mechN.data('_numInst') === 2) return 0.3
         return 0.5 // mechanism edge pull
       },
       gravity: 0.15,
       gravityRange: 3.8,
+      initialEnergyOnIncremental: 0.08,
       numIter: 5000,
       nodeDimensionsIncludeLabels: true,
       padding: 50,
       fixedNodeConstraint,
+      relativePlacementConstraint,
     } as cytoscape.LayoutOptions)
     layoutRef.current = layout
     layout.run()
