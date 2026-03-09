@@ -16,7 +16,7 @@ import {
   selectBrowseLoading,
   selectBrowseError,
 } from '../store/slices/browseSlice'
-import { BrowseDataContext } from '../contexts/BrowseDataContext'
+import { BrowseDataContext, type BrowseData } from '../contexts/BrowseDataContext'
 import BrowseIndex from '../components/browse/BrowseIndex'
 import EntityDetailRouter from '../components/browse/EntityDetailRouter'
 
