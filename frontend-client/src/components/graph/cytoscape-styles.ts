@@ -182,7 +182,7 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'target-arrow-color': '#4A5568',
       'target-arrow-shape': 'triangle',
       'line-style': 'dashed',
-      'line-dash-pattern': [6, 4] as unknown as number,
+      'line-dash-pattern': [6, 4] as never,
       'curve-style': 'bezier',
     },
   },
