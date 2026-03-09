@@ -1283,13 +1283,13 @@ export default function SystemMap({ onNodeSelect, onMechanismExpand, onDmExpand,
       animate: true,
       animationDuration: 800,
       quality: 'default',
-      nodeRepulsion: () => 6000,
+      nodeRepulsion: () => 9000,
       // Short membership edges pull DMs close to institutions;
       // long mechanism edges push mechanisms to the outer ring
       idealEdgeLength: (edge: cytoscape.EdgeSingular) => {
-        if (edge.hasClass('gravity-edge')) return 120 // pull mechanisms toward institutions
-        if (edge.hasClass('membership-edge')) return 80
-        return 150 // mechanism↔DM edges
+        if (edge.hasClass('gravity-edge')) return 160 // pull mechanisms toward institutions
+        if (edge.hasClass('membership-edge')) return 100
+        return 180 // mechanism↔DM edges
       },
       edgeElasticity: (edge: cytoscape.EdgeSingular) => {
         if (edge.hasClass('gravity-edge')) {
