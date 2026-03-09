@@ -1,0 +1,13 @@
+ARG ENV_IMAGE
+FROM ${ENV_IMAGE}
+ARG CI_COMMIT_SHA
+ARG ENV_CONFIG
+ENV PORT=80 \
+    ENV_CONFIG="$ENV_CONFIG" \
+    CI_COMMIT_SHA="$CI_COMMIT_SHA" \
+    DJANGO_SETTINGS_MODULE=massbailfund.settings
+EXPOSE 80
+COPY . /app
+RUN env DOCKER_BUILD=1 ./manage.py collectstatic --noinput -v2
+RUN python -m whitenoise.compress staticfiles
+CMD ["/app/run"]

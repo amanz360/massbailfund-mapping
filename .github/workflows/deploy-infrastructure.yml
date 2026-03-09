@@ -1,0 +1,98 @@
+name: Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/**"
+  pull_request:
+    paths:
+      - "infrastructure/**"
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: "1.7"
+
+jobs:
+  validate:
+    name: Validate & Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+        working-directory: infrastructure
+
+      - name: Validate shared
+        working-directory: infrastructure/environments/shared
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate production
+        working-directory: infrastructure/environments/production
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  plan:
+    name: Plan
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Plan production
+        working-directory: infrastructure/environments/production
+        run: |
+          terraform init -input=false
+          terraform plan -input=false -no-color
+        env:
+          TF_VAR_aws_account_id: ${{ secrets.TF_VAR_AWS_ACCOUNT_ID }}
+
+  apply:
+    name: Apply
+    needs: plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Apply production
+        working-directory: infrastructure/environments/production
+        run: |
+          terraform init -input=false
+          terraform apply -auto-approve -input=false
+        env:
+          TF_VAR_aws_account_id: ${{ secrets.TF_VAR_AWS_ACCOUNT_ID }}

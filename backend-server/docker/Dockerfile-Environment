@@ -1,0 +1,33 @@
+FROM public.ecr.aws/docker/library/python:3.12-slim-bookworm AS env_builder312
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential libpq-dev curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -sSL https://install.python-poetry.org | python3 && \
+    mkdir -p /app
+ENV WORKON_HOME=/venvs \
+    PORT=8080 \
+    DJANGO_SETTINGS_MODULE=massbailfund.settings \
+    POETRY_VIRTUALENVS_PATH=/venvs \
+    PATH="/venvs/massbailfund/bin:/root/.local/bin:${PATH}"
+
+WORKDIR /app
+COPY pyproject.toml poetry.lock /app/
+RUN python -mvenv /venvs/massbailfund && \
+    chmod +x /venvs/massbailfund/bin/activate
+ENV VIRTUAL_ENV=/venvs/massbailfund
+RUN poetry config virtualenvs.create false && \
+    pip install --upgrade pip && \
+    poetry install --no-root
+
+FROM public.ecr.aws/docker/library/python:3.12-slim-bookworm
+ENV WORKON_HOME=/venvs \
+    PATH="/venvs/massbailfund/bin:/root/.local/bin:/app/bin:${PATH}" \
+    VIRTUAL_ENV=/venvs/massbailfund
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libpq-dev curl && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=env_builder312 /venvs /venvs
+WORKDIR /app

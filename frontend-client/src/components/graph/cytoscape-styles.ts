@@ -1,0 +1,216 @@
+import type { StylesheetStyle } from 'cytoscape'
+
+export const cytoscapeStyles: StylesheetStyle[] = [
+  // Mechanism nodes (purple)
+  {
+    selector: 'node[primary_type="Mechanism"]',
+    style: {
+      'background-color': '#5525E3',
+      shape: 'roundrectangle',
+      label: 'data(name)',
+      'font-family': '"Source Sans 3", sans-serif',
+      'text-valign': 'center',
+      'text-halign': 'center',
+      'text-wrap': 'wrap',
+      'text-max-width': '140px',
+      'font-size': '12px',
+      'font-weight': 600,
+      color: '#ffffff',
+      width: '160px',
+      height: '60px',
+      'border-width': 0,
+    },
+  },
+  // Decision Maker nodes (dark navy)
+  {
+    selector: 'node[primary_type="Decision Maker"]',
+    style: {
+      'background-color': '#000F35',
+      shape: 'roundrectangle',
+      label: 'data(name)',
+      'font-family': '"Source Sans 3", sans-serif',
+      'text-valign': 'center',
+      'text-halign': 'center',
+      'text-wrap': 'wrap',
+      'text-max-width': '120px',
+      'font-size': '11px',
+      'font-weight': 600,
+      color: '#ffffff',
+      width: '130px',
+      height: '50px',
+      'border-width': 0,
+    },
+  },
+  // High-connectivity Decision Maker nodes — scaled up
+  {
+    selector: 'node[primary_type="Decision Maker"][?highConnectivity]',
+    style: {
+      width: '160px',
+      height: '60px',
+      'font-size': '12px',
+      'text-max-width': '140px',
+    },
+  },
+  // Institution nodes (diamond shape)
+  {
+    selector: 'node[primary_type="Institution"]',
+    style: {
+      'background-color': '#4A5568',
+      shape: 'diamond',
+      label: 'data(name)',
+      'font-family': '"Source Sans 3", sans-serif',
+      'text-valign': 'center',
+      'text-halign': 'center',
+      'text-wrap': 'wrap',
+      'text-max-width': '100px',
+      'font-size': '11px',
+      'font-weight': 700,
+      color: '#ffffff',
+      width: '110px',
+      height: '80px',
+      'border-width': 2,
+      'border-color': '#ffffff',
+    },
+  },
+  // Center institution in expanded view
+  {
+    selector: 'node.center-institution',
+    style: {
+      width: '150px',
+      height: '110px',
+      'font-size': '14px',
+      'font-weight': 700,
+      'text-max-width': '130px',
+    },
+  },
+  // Center mechanism in expanded view
+  {
+    selector: 'node.center-mechanism',
+    style: {
+      width: '200px',
+      height: '75px',
+      'font-size': '14px',
+      'font-weight': 700,
+      'text-max-width': '180px',
+    },
+  },
+  // DM nodes in expanded view
+  {
+    selector: 'node.expanded-dm',
+    style: {},
+  },
+  // Center DM in DM-centric expanded view
+  {
+    selector: 'node.center-dm',
+    style: {
+      width: '180px',
+      height: '65px',
+      'font-size': '13px',
+      'font-weight': 700,
+      'text-max-width': '160px',
+    },
+  },
+  // Clicked DM in expanded view
+  {
+    selector: 'node.active-dm',
+    style: {
+      'border-width': 3,
+      'border-color': '#8891ED',
+    },
+  },
+  // Selected node
+  {
+    selector: 'node:selected',
+    style: {
+      'border-width': 3,
+      'border-color': '#8891ED',
+    },
+  },
+  // Edges — default
+  {
+    selector: 'edge',
+    style: {
+      width: 2,
+      'line-color': '#6b6088',
+      'target-arrow-color': '#6b6088',
+      'target-arrow-shape': 'triangle',
+      'curve-style': 'bezier',
+      opacity: 0.35,
+    },
+  },
+  // Edge hover — show label on mouseover
+  {
+    selector: 'edge.hover-edge',
+    style: {
+      width: 2.5,
+      opacity: 1,
+      'line-color': '#5525E3',
+      'target-arrow-color': '#5525E3',
+      label: 'data(relationship_type)',
+      'font-size': '10px',
+      'text-background-color': '#F2EDF4',
+      'text-background-opacity': 0.95,
+      'text-background-padding': '3px',
+      color: '#000F35',
+      'text-rotation': 'autorotate',
+    },
+  },
+  // Edges in expanded view — visible relationship type labels
+  {
+    selector: 'edge.expanded-edge',
+    style: {
+      width: 2.5,
+      opacity: 0.85,
+      label: 'data(relationship_type)',
+      'font-size': '10px',
+      'text-wrap': 'wrap',
+      'text-max-width': '200px',
+      'text-background-color': '#F2EDF4',
+      'text-background-opacity': 0.95,
+      'text-background-padding': '3px',
+      color: '#000F35',
+      'text-rotation': 'autorotate',
+    },
+  },
+  // Institution membership edges — subtle, no label
+  {
+    selector: 'edge.membership-edge',
+    style: {
+      width: 1.5,
+      opacity: 0.4,
+      'line-color': '#4A5568',
+      'target-arrow-color': '#4A5568',
+      'target-arrow-shape': 'triangle',
+      'line-style': 'dashed',
+      'line-dash-pattern': [6, 4] as unknown as number,
+      'curve-style': 'bezier',
+    },
+  },
+  // Dimmed state
+  {
+    selector: '.dimmed',
+    style: { opacity: 0.12 },
+  },
+  // Highlighted node
+  {
+    selector: 'node.highlighted',
+    style: { opacity: 1 },
+  },
+  // Highlighted edge — show relationship label
+  {
+    selector: 'edge.highlighted',
+    style: {
+      opacity: 1,
+      width: 2.5,
+      'line-color': '#5525E3',
+      'target-arrow-color': '#5525E3',
+      label: 'data(relationship_type)',
+      'font-size': '9px',
+      'text-background-color': '#F2EDF4',
+      'text-background-opacity': 0.95,
+      'text-background-padding': '2px',
+      color: '#000F35',
+      'text-rotation': 'autorotate',
+    },
+  },
+]

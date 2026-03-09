@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if test -z "$PORT"; then
+  PORT=8080
+fi
+
+echo "Starting massbailfund"
+uwsgi --ini uwsgi.ini

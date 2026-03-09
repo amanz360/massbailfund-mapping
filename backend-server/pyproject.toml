@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "massbailfund"
+version = "0.1.0"
+description = ""
+authors = ["Aman Zargarpur <aman@massbailfund.org>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+Django = "^6.0"
+djangorestframework = "^3.16.1"
+drf-spectacular = "^0.29.0"
+django-cors-headers = "^4.9.0"
+django-filter = "^25.2"
+psycopg2 = "^2.9.11"
+dj-database-url = "^3.1.2"
+python-dotenv = "^1.2.2"
+uwsgi = "^2.0.31"
+whitenoise = "^6.12.0"
+boto3 = "^1.42.62"
+sentry-sdk = "^2.54.0"
+django-storages = "^1.14.6"
+pillow = "^12.1.1"
+django-jsonform = "^2.23.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-django = "^4.12.0"
+flake8 = "^7.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

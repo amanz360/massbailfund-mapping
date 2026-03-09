@@ -1,0 +1,132 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend-server/**"
+  pull_request:
+    paths:
+      - "backend-server/**"
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: mbf-production-web
+  ECS_CLUSTER: mbf-production
+  ECS_SERVICE: mbf-production-web
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16.13
+        env:
+          POSTGRES_DB: test_massbailfund
+          POSTGRES_USER: massbailfund
+          POSTGRES_PASSWORD: massbailfund
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U massbailfund"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: backend-server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --no-root
+
+      - name: Run tests
+        env:
+          ENV_CONFIG: test
+          DATABASE_URL: postgres://massbailfund:massbailfund@localhost:5432/test_massbailfund
+          DJANGO_SECRET_KEY: test-secret-key
+        run: pytest
+
+  build-and-deploy:
+    name: Build & Deploy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and cache environment image
+        working-directory: backend-server
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          ENV_TAG=$(sha256sum poetry.lock docker/Dockerfile-Environment | sha256sum | awk '{print $1}')
+          ENV_IMAGE="${ECR_REGISTRY}/mbf-production-env"
+
+          # Check if environment image already exists (skip rebuild if deps unchanged)
+          if aws ecr describe-images --repository-name mbf-production-env --image-ids imageTag="$ENV_TAG" 2>/dev/null; then
+            echo "Environment image unchanged, skipping build"
+          else
+            # Ensure repo exists
+            aws ecr describe-repositories --repository-names mbf-production-env 2>/dev/null || \
+              aws ecr create-repository --repository-name mbf-production-env
+            docker build -f docker/Dockerfile-Environment -t "$ENV_IMAGE:latest" -t "$ENV_IMAGE:$ENV_TAG" .
+            docker push --all-tags "$ENV_IMAGE"
+          fi
+
+          echo "ENV_IMAGE=$ENV_IMAGE" >> "$GITHUB_ENV"
+          echo "ENV_TAG=$ENV_TAG" >> "$GITHUB_ENV"
+
+      - name: Build deploy image
+        working-directory: backend-server
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          docker build \
+            --build-arg ENV_IMAGE="$ENV_IMAGE" \
+            --build-arg ENV_CONFIG=production \
+            --build-arg CI_COMMIT_SHA="$GITHUB_SHA" \
+            -f docker/Dockerfile-Deploy \
+            -t "$ECR_REGISTRY/$ECR_REPO:latest" \
+            -t "$ECR_REGISTRY/$ECR_REPO:$GITHUB_SHA" \
+            .
+          docker push --all-tags "$ECR_REGISTRY/$ECR_REPO"
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION"
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"

@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  web:
+    image: massbailfund-dev:latest
+    logging:
+      driver: ${LOG_DRIVER:-syslog}
+      options:
+        tag: "massbailfund-server"
+    container_name: mbf-appserver
+    restart: unless-stopped
+    hostname: 'localhost'
+    depends_on:
+      - appserver-db
+    ports:
+      - '8080:8080'
+    volumes:
+      - ../:/app
+      - ${HOME}/.aws:/root/.aws:ro
+    links:
+      - 'appserver-db'
+    command: >
+      bash -c "./manage.py migrate --noinput && ./manage.py runserver 0.0.0.0:8080"
+    environment:
+      - AWS_PROFILE=default
+      - TZ=America/New_York
+      - ENV_CONFIG=dev
+      - DJANGO_SETTINGS_MODULE=massbailfund.settings
+      - DATABASE_URL=postgres://massbailfund:massbailfund@mbf-appserver-db:5432/massbailfund
+      - DJANGO_SECRET_KEY=massbailfund-local-dev-secret-key
+      - PORT=8080
+      - WORKON_HOME=/venvs
+      - DB_HOST=mbf-appserver-db
+    networks:
+      - massbailfund
+  appserver-db:
+    image: 'postgres:16.13'
+    container_name: mbf-appserver-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=massbailfund
+      - POSTGRES_PASSWORD=massbailfund
+      - POSTGRES_DB=massbailfund
+    ports:
+      - '5434:5432'
+    volumes:
+      - 'mbf_db_data:/var/lib/postgresql/data'
+      - '../:/app'
+    networks:
+      - massbailfund
+  db-admin:
+    image: dpage/pgadmin4
+    container_name: mbf-db-admin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@massbailfund.org
+      PGADMIN_DEFAULT_PASSWORD: password
+    depends_on:
+      - appserver-db
+    ports:
+      - "8082:80"
+    networks:
+      - massbailfund
+networks:
+  massbailfund:
+    driver: bridge
+
+volumes:
+  mbf_db_data:
