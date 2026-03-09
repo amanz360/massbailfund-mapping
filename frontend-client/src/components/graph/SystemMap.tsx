@@ -481,8 +481,6 @@ function computeMechanismExpandedPositions(
       if (source?.primary_type === 'Decision Maker') dmIdSet.add(edge.source)
     }
   }
-  const dmIds = [...dmIdSet]
-
   // Collect primary institutions of those DMs (deduplicated)
   const instIdSet = new Set<string>()
   for (const m of data.memberships) {
@@ -492,6 +490,56 @@ function computeMechanismExpandedPositions(
   }
   const instIds = [...instIdSet]
 
+  // Build DM ↔ institution adjacency for primary memberships in this view
+  const dmToInsts = new Map<string, string[]>()
+  const instToDms = new Map<string, string[]>()
+  for (const dmId of dmIdSet) dmToInsts.set(dmId, [])
+  for (const instId of instIds) instToDms.set(instId, [])
+  for (const m of data.memberships) {
+    if (dmIdSet.has(m.member) && m.membership_type === 'Primary' && instIdSet.has(m.institution)) {
+      dmToInsts.get(m.member)!.push(m.institution)
+      instToDms.get(m.institution)!.push(m.member)
+    }
+  }
+
+  // Barycenter heuristic: iteratively sort DMs by average institution rank
+  // and institutions by average DM rank to minimise membership edge crossings.
+  let instOrder = [...instIds].sort((a, b) => {
+    const nameA = data.nodes.find((n) => n.id === a)?.name || ''
+    const nameB = data.nodes.find((n) => n.id === b)?.name || ''
+    return nameA.localeCompare(nameB)
+  })
+  let dmOrder = [...dmIdSet]
+
+  for (let iter = 0; iter < 6; iter++) {
+    // Score each DM by average rank of its connected institutions
+    const instRank = new Map<string, number>()
+    instOrder.forEach((id, i) => instRank.set(id, i))
+
+    const dmScored = dmOrder.map((dmId) => {
+      const insts = dmToInsts.get(dmId) || []
+      const ranks = insts.map((id) => instRank.get(id) ?? 0)
+      const score = ranks.length > 0 ? ranks.reduce((s, r) => s + r, 0) / ranks.length : instOrder.length / 2
+      return { id: dmId, score }
+    })
+    dmScored.sort((a, b) => a.score - b.score)
+    dmOrder = dmScored.map((d) => d.id)
+
+    // Score each institution by average rank of its connected DMs
+    const dmRank = new Map<string, number>()
+    dmOrder.forEach((id, i) => dmRank.set(id, i))
+
+    const instScored = instOrder.map((instId) => {
+      const dms = instToDms.get(instId) || []
+      const ranks = dms.map((id) => dmRank.get(id) ?? 0)
+      const score = ranks.length > 0 ? ranks.reduce((s, r) => s + r, 0) / ranks.length : dmOrder.length / 2
+      return { id: instId, score }
+    })
+    instScored.sort((a, b) => a.score - b.score)
+    instOrder = instScored.map((s) => s.id)
+  }
+
+  const dmIds = dmOrder
   const DM_COUNT = dmIds.length
 
   // --- Mechanism on the right ---
@@ -508,45 +556,19 @@ function computeMechanismExpandedPositions(
     })
   }
 
-  // --- Institutions on the left, aligned with their connected DMs ---
-  // Position each institution at the average y of its connected DMs in this view
-  if (instIds.length > 0) {
+  // --- Institutions on the left, evenly spaced and ordered by barycenter ---
+  if (instOrder.length > 0) {
     const INST_X = -200
-    const instPositions: { id: string; y: number }[] = []
+    const INST_COUNT = instOrder.length
+    // Span the same vertical range as the DM stack
+    const instTotalHeight = INST_COUNT === 1 ? 0 : dmTotalHeight
+    const instSpacing = INST_COUNT === 1 ? 0 : instTotalHeight / (INST_COUNT - 1)
 
-    for (const instId of instIds) {
-      const connectedDmYs: number[] = []
-      for (const m of data.memberships) {
-        if (m.institution === instId && m.membership_type === 'Primary' && dmIdSet.has(m.member)) {
-          const dmPos = positions.get(m.member)
-          if (dmPos) connectedDmYs.push(dmPos.y)
-        }
-      }
-      const avgY = connectedDmYs.length > 0
-        ? connectedDmYs.reduce((sum, y) => sum + y, 0) / connectedDmYs.length
-        : 0
-      instPositions.push({ id: instId, y: avgY })
-    }
-
-    // Sort by y and resolve collisions (institution circles are ~95px)
-    instPositions.sort((a, b) => a.y - b.y)
-    const MIN_INST_DIST = 100
-    for (let iter = 0; iter < 20; iter++) {
-      let moved = false
-      for (let i = 0; i < instPositions.length - 1; i++) {
-        const gap = instPositions[i + 1].y - instPositions[i].y
-        if (gap < MIN_INST_DIST) {
-          const push = (MIN_INST_DIST - gap) / 2
-          instPositions[i].y -= push
-          instPositions[i + 1].y += push
-          moved = true
-        }
-      }
-      if (!moved) break
-    }
-
-    for (const ip of instPositions) {
-      positions.set(ip.id, { x: INST_X, y: ip.y })
+    for (let i = 0; i < INST_COUNT; i++) {
+      positions.set(instOrder[i], {
+        x: INST_X,
+        y: -instTotalHeight / 2 + i * instSpacing,
+      })
     }
   }
 
