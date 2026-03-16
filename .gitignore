@@ -20,3 +20,8 @@ dist/
 # IDE
 .vscode/
 .idea/
+
+# Planning files
+findings.md
+progress.md
+task_plan.md

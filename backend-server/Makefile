@@ -20,9 +20,9 @@ rebuild:
 	-f docker/Dockerfile-Environment \
 	-t massbailfund-dev:latest .
 up:
-	LOG_DRIVER=$(LOG_DRIVER) docker-compose -f docker/compose-local.yml up -d
+	LOG_DRIVER=$(LOG_DRIVER) docker compose -f docker/compose-local.yml up -d
 down:
-	docker-compose -f docker/compose-local.yml down
+	docker compose -f docker/compose-local.yml down
 bdu: build-environment down up
 restart:
 	docker restart mbf-appserver

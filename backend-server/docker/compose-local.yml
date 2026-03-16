@@ -1,4 +1,6 @@
-version: '3'
+name: massbailfund
+
+name: massbailfund
 
 services:
   web:

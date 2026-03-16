@@ -59,7 +59,7 @@ resource "aws_db_instance" "main" {
   username = "postgres"
   port     = 5432
 
-  manage_master_user_password = true
+  manage_master_user_password = false
 
   multi_az               = var.multi_az
   db_subnet_group_name   = aws_db_subnet_group.main.name
