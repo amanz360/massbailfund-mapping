@@ -69,6 +69,12 @@ variable "deletion_protection" {
   default = true
 }
 
+variable "password" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

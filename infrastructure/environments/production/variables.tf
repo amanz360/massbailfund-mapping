@@ -45,6 +45,12 @@ variable "rds_allowed_cidrs" {
   default = []
 }
 
+variable "rds_password" {
+  type      = string
+  default   = null
+  sensitive = true
+}
+
 # IAM Roles
 variable "ecs_task_execution_role_arn" {
   type = string

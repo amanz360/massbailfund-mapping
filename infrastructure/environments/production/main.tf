@@ -56,6 +56,7 @@ module "rds" {
 
   publicly_accessible = var.rds_publicly_accessible
   deletion_protection = true
+  password            = var.rds_password
 }
 
 ################################################################################
