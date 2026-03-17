@@ -131,9 +131,6 @@ export default function DetailPanel({ onClose, onNavigate, expandedMechanismId }
       {(() => {
         const isExpandedMech = !!expandedMechanismId
 
-        // Mechanism in expanded view: hide relationships (visible on graph)
-        if (isExpandedMech && primaryType === 'Mechanism') return null
-
         if (isMechanismDetail(entity)) {
           // Mechanism: show roles (connected decision makers)
           if (entity.roles.length === 0) return null
