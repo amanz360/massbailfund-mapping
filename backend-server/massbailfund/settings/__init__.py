@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv(
     "django-insecure-CHANGE-ME-IN-PRODUCTION",
 )
 
-if CURRENT_CONFIGURATION == "production" and "insecure" in SECRET_KEY:
+if CURRENT_CONFIGURATION == "production" and "insecure" in SECRET_KEY and not os.getenv("DOCKER_BUILD"):
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured(
         "DJANGO_SECRET_KEY must be set in production. "
