@@ -33,7 +33,14 @@ SECRET_KEY = os.getenv(
     "django-insecure-CHANGE-ME-IN-PRODUCTION",
 )
 
-ALLOWED_HOSTS = ["*"]
+if CURRENT_CONFIGURATION == "production" and "insecure" in SECRET_KEY:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY must be set in production. "
+        "The insecure default key is not allowed."
+    )
+
+ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
