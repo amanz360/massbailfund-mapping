@@ -36,14 +36,16 @@ const initialState: BrowseState = {
 }
 
 export const loadBrowseData = createAsyncThunk('browse/loadBrowseData', async () => {
+  const failed: string[] = []
   const [mechanisms, decisionMakers, institutions, glossary, generalResources] = await Promise.all([
-    fetchMechanisms().catch(() => [] as MechanismDetail[]),
-    fetchDecisionMakers().catch(() => [] as DecisionMakerDetail[]),
-    fetchInstitutions().catch(() => [] as InstitutionDetail[]),
-    fetchGlossary().catch(() => [] as GlossaryTermItem[]),
-    fetchGeneralResources().catch(() => [] as ResourceItem[]),
+    fetchMechanisms().catch(() => { failed.push('mechanisms'); return [] as MechanismDetail[] }),
+    fetchDecisionMakers().catch(() => { failed.push('decision makers'); return [] as DecisionMakerDetail[] }),
+    fetchInstitutions().catch(() => { failed.push('institutions'); return [] as InstitutionDetail[] }),
+    fetchGlossary().catch(() => { failed.push('glossary'); return [] as GlossaryTermItem[] }),
+    fetchGeneralResources().catch(() => { failed.push('resources'); return [] as ResourceItem[] }),
   ])
-  return { mechanisms, decisionMakers, institutions, glossary, generalResources }
+  const error = failed.length ? `Failed to load: ${failed.join(', ')}` : null
+  return { mechanisms, decisionMakers, institutions, glossary, generalResources, error }
 })
 
 const browseSlice = createSlice({
@@ -58,6 +60,7 @@ const browseSlice = createSlice({
       })
       .addCase(loadBrowseData.fulfilled, (state, action) => {
         state.loading = false
+        state.error = action.payload.error
         state.mechanisms = action.payload.mechanisms
         state.decisionMakers = action.payload.decisionMakers
         state.institutions = action.payload.institutions

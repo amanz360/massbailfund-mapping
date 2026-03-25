@@ -23,7 +23,7 @@ if CURRENT_CONFIGURATION in ("staging", "production") and SENTRY_DSN:
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration()],
         attach_stacktrace=True,
-        send_default_pii=True,
+        send_default_pii=False,
     )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
