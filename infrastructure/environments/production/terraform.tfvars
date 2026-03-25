@@ -8,7 +8,8 @@ public_subnets = [
 
 rds_instance_class    = "db.t3.micro"
 rds_allocated_storage = 20
-rds_allowed_cidrs     = [] # Add your IP: ["YOUR_IP/32"]
+rds_publicly_accessible = false
+rds_allowed_cidrs       = []
 
 # From shared environment outputs
 ecs_task_execution_role_arn = "arn:aws:iam::672920784568:role/ecsTaskExecutionRole"
