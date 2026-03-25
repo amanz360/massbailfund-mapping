@@ -3,12 +3,18 @@ import { alpha } from '@mui/material/styles'
 import MapIcon from '@mui/icons-material/Map'
 import ViewModuleIcon from '@mui/icons-material/ViewModule'
 import { useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import { selectMechanisms, selectDecisionMakers, selectInstitutions, selectBrowseLoading } from '../store/slices/browseSlice'
 
 const LOGO_WHITE_SRC = '/MBF_hybridlogo_white.png'
 
 export default function Landing() {
   const navigate = useNavigate()
   const theme = useTheme()
+  const mechanisms = useSelector(selectMechanisms)
+  const decisionMakers = useSelector(selectDecisionMakers)
+  const institutions = useSelector(selectInstitutions)
+  const loading = useSelector(selectBrowseLoading)
 
   return (
     <Box
@@ -139,9 +145,9 @@ export default function Landing() {
         }}
       >
         {[
-          ['12', 'Mechanisms'],
-          ['16', 'Decision Makers'],
-          ['3', 'Institutions'],
+          [loading ? '—' : String(mechanisms.length), 'Mechanisms'],
+          [loading ? '—' : String(decisionMakers.length), 'Decision Makers'],
+          [loading ? '—' : String(institutions.length), 'Institutions'],
         ].map(([count, label]) => (
           <Box key={label} sx={{ textAlign: 'center' }}>
             <Typography
