@@ -40,14 +40,14 @@ npm --version
 
    The app is available at [http://localhost:5174](http://localhost:5174).
 
-4. **Full local stack:** Start the backend first (`cd backend-server && make up`), then run `npm run dev:local` so the frontend talks to your local Django API at `http://127.0.0.1:8080`.
+4. **Full local stack:** Start the backend first (`cd backend-server && make up`), then run `npm run dev:local` so the frontend talks to your local Django API at `http://127.0.0.1:8090`.
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Dev server (uses deployed API) |
-| `npm run dev:local` | Dev server pointing at local backend (port 8080) |
+| `npm run dev:local` | Dev server pointing at local backend (port 8090) |
 | `npm run build` | Production build (TypeScript check + Vite build) |
 | `npm run lint` | ESLint check |
 | `npm run preview` | Preview the production build locally |
@@ -164,7 +164,7 @@ The app uses Material UI with Emotion:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_DOMAIN_URL` | Backend API base URL | `http://127.0.0.1:8080/` |
+| `VITE_API_DOMAIN_URL` | Backend API base URL | `http://127.0.0.1:8090/` |
 
 Set at build time (prefix `VITE_` exposes it to client code via `import.meta.env`).
 

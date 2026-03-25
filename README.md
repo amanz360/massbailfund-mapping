@@ -43,7 +43,7 @@ Each component has its own README with setup instructions and development guides
 | Frontend | http://app.massbailfund.org.s3-website-us-east-1.amazonaws.com |
 | API | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/health |
 | API Docs | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/api/docs/ |
-| Admin Panel | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/admin/ |
+| Admin Panel | https://3sbjv34ec0.execute-api.us-east-1.amazonaws.com/mbf-admin/ |
 
 ## Quick Start
 
@@ -54,7 +54,7 @@ Each component has its own README with setup instructions and development guides
 cd backend-server
 make build-environment
 make up
-# API available at http://localhost:8080
+# API available at http://localhost:8090
 
 # Terminal 2: Start the frontend
 cd frontend-client

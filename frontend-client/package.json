@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:local": "VITE_API_DOMAIN_URL=http://127.0.0.1:8080/ vite",
+    "dev:local": "VITE_API_DOMAIN_URL=http://127.0.0.1:8090/ vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

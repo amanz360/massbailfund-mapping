@@ -40,9 +40,9 @@ You also need `make` installed:
    ```
 
    This starts three containers:
-   - **mbf-appserver** — Django dev server at [http://localhost:8080](http://localhost:8080)
-   - **mbf-appserver-db** — PostgreSQL 16.13 at localhost:5434
-   - **mbf-db-admin** — pgAdmin at [http://localhost:8082](http://localhost:8082)
+   - **mbf-appserver** — Django dev server at [http://localhost:8090](http://localhost:8090)
+   - **mbf-appserver-db** — PostgreSQL 16.13 at localhost:5435
+   - **mbf-db-admin** — pgAdmin at [http://localhost:8092](http://localhost:8092)
 
    On first startup, the Django dev server automatically runs migrations.
 
@@ -52,12 +52,12 @@ You also need `make` installed:
    make superuser
    ```
 
-   Admin panel is at [http://localhost:8080/admin/](http://localhost:8080/admin/).
+   Admin panel is at [http://localhost:8090/mbf-admin/](http://localhost:8090/mbf-admin/).
 
 5. **Verify it's running:**
 
    ```bash
-   curl http://localhost:8080/health
+   curl http://localhost:8090/health
    # ok
    ```
 
@@ -208,7 +208,7 @@ make test TEST_PATH=core/tests/test_views.py::TestMechanismAPI::test_list
 
 ## pgAdmin
 
-Access pgAdmin at [http://localhost:8082](http://localhost:8082):
+Access pgAdmin at [http://localhost:8092](http://localhost:8092):
 
 - **Email:** `admin@massbailfund.org`
 - **Password:** `password`

@@ -22,7 +22,7 @@ Interactive map of the Massachusetts pretrial incarceration system for the Mass 
 
 ### Frontend (`frontend-client/`)
 - `npm run dev` — start Vite dev server
-- `npm run dev:local` — dev server pointing at local backend (port 8080)
+- `npm run dev:local` — dev server pointing at local backend (port 8090)
 - `npm run build` — production build (tsc + vite)
 - `npm run lint` — ESLint
 

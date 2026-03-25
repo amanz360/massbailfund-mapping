@@ -3,7 +3,7 @@ from django.core.cache import cache as django_cache
 
 
 @pytest.fixture(autouse=True)
-def clear_cache():
+def clear_cache(db):
     django_cache.clear()
     yield
     django_cache.clear()
