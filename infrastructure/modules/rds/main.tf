@@ -76,7 +76,7 @@ resource "aws_db_instance" "main" {
   final_snapshot_identifier = "${var.identifier}-final-snapshot"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
-  auto_minor_version_upgrade      = false
+  auto_minor_version_upgrade      = true
 
   tags = merge(var.tags, {
     Name = var.identifier
