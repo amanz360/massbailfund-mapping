@@ -38,7 +38,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret",
         ]
-        Resource = "*"
+        Resource = "arn:aws:secretsmanager:us-east-1:*:secret:mbf/*"
       }
     ]
   })
@@ -75,7 +75,7 @@ resource "aws_iam_role_policy" "ecs_task_secrets" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret",
         ]
-        Resource = "*"
+        Resource = "arn:aws:secretsmanager:us-east-1:*:secret:mbf/*"
       }
     ]
   })
