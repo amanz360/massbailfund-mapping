@@ -6,8 +6,8 @@ public_subnets = [
   { cidr = "172.31.2.0/24", availability_zone = "us-east-1b" },
 ]
 
-rds_instance_class    = "db.t3.micro"
-rds_allocated_storage = 20
+rds_instance_class      = "db.t3.micro"
+rds_allocated_storage   = 20
 rds_publicly_accessible = false
 rds_allowed_cidrs       = []
 
