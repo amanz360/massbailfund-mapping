@@ -86,6 +86,18 @@ module "ecs_cluster" {
 }
 
 ################################################################################
+# Secrets Manager Lookups
+################################################################################
+
+data "aws_secretsmanager_secret" "database_url" {
+  name = "mbf/production/DATABASE_URL"
+}
+
+data "aws_secretsmanager_secret" "django_secret_key" {
+  name = "mbf/production/DJANGO_SECRET_KEY"
+}
+
+################################################################################
 # ECS Web Service
 ################################################################################
 
@@ -121,8 +133,8 @@ module "ecs_web" {
   }
 
   secrets = {
-    DATABASE_URL      = "arn:aws:secretsmanager:us-east-1:672920784568:secret:mbf/production/DATABASE_URL-P8Tuem"
-    DJANGO_SECRET_KEY = "arn:aws:secretsmanager:us-east-1:672920784568:secret:mbf/production/DJANGO_SECRET_KEY-cHH3g5"
+    DATABASE_URL      = data.aws_secretsmanager_secret.database_url.arn
+    DJANGO_SECRET_KEY = data.aws_secretsmanager_secret.django_secret_key.arn
   }
 
   aws_region = var.aws_region
