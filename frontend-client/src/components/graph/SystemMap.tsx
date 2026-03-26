@@ -48,11 +48,6 @@ export default function SystemMap({
     cyReady,
     renderLanding,
     renderExpanded,
-    currentLevelRef,
-    renderLandingRef,
-    renderExpandedRef,
-    graphDataRef,
-    onNodeSelectRef,
   } = useGraphNavigation(
     cyRef,
     containerRef,
@@ -67,11 +62,11 @@ export default function SystemMap({
 
   // Event handlers: tap, double-tap, hover, escape key
   useGraphEvents(cyRef, cyReady, {
-    currentLevelRef,
-    graphDataRef,
-    renderLandingRef,
-    renderExpandedRef,
-    onNodeSelectRef,
+    currentLevel,
+    graphData,
+    renderLanding,
+    renderExpanded,
+    onNodeSelect,
     dispatch,
   })
 

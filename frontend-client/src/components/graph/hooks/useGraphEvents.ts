@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { MutableRefObject } from 'react'
 import type cytoscape from 'cytoscape'
 import type { Core } from 'cytoscape'
@@ -9,22 +9,39 @@ import { selectEntity } from '../../../store/slices/detailSlice'
 
 /**
  * Registers all Cytoscape event handlers — tap, double-tap, hover, and
- * keyboard shortcuts. Depends on refs from useGraphNavigation to access
- * current state without stale closures.
+ * keyboard shortcuts. Creates stable refs internally so event handlers
+ * registered once (on cyReady) always read current state.
  */
 export function useGraphEvents(
   cyRef: MutableRefObject<Core | null>,
   cyReady: boolean,
   options: {
-    currentLevelRef: MutableRefObject<ViewLevel>
-    graphDataRef: MutableRefObject<GraphData | null>
-    renderLandingRef: MutableRefObject<() => void>
-    renderExpandedRef: MutableRefObject<(viewType: ExpandedViewType, entityId: string) => void>
-    onNodeSelectRef: MutableRefObject<((id: string | null) => void) | undefined>
+    currentLevel: ViewLevel
+    graphData: GraphData | null
+    renderLanding: () => void
+    renderExpanded: (viewType: ExpandedViewType, entityId: string) => void
+    onNodeSelect?: (id: string | null) => void
     dispatch: AppDispatch
   },
 ): void {
-  const { currentLevelRef, graphDataRef, renderLandingRef, renderExpandedRef, onNodeSelectRef, dispatch } = options
+  const { currentLevel, graphData, renderLanding, renderExpanded, onNodeSelect, dispatch } = options
+
+  // Ref synchronization — event handlers are registered once (on cyReady) and
+  // read current state through stable refs to avoid stale closures.
+  const currentLevelRef = useRef(currentLevel)
+  useEffect(() => { currentLevelRef.current = currentLevel }, [currentLevel])
+
+  const graphDataRef = useRef(graphData)
+  useEffect(() => { graphDataRef.current = graphData }, [graphData])
+
+  const renderLandingRef = useRef(renderLanding)
+  useEffect(() => { renderLandingRef.current = renderLanding }, [renderLanding])
+
+  const renderExpandedRef = useRef(renderExpanded)
+  useEffect(() => { renderExpandedRef.current = renderExpanded }, [renderExpanded])
+
+  const onNodeSelectRef = useRef(onNodeSelect)
+  useEffect(() => { onNodeSelectRef.current = onNodeSelect }, [onNodeSelect])
 
   // Register all cytoscape event handlers once cy is ready
   useEffect(() => {

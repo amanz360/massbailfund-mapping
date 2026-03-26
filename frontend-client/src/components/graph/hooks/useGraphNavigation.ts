@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import type { MutableRefObject, RefObject } from 'react'
 import cytoscape, { type Core, type Layouts } from 'cytoscape'
 import fcose from 'cytoscape-fcose'
@@ -122,28 +122,6 @@ export function useGraphNavigation(
     dispatch(selectEntity(entityId))
   }, [cyRef, layoutRef, graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
 
-  // ---------------------------------------------------------------------------
-  // Ref synchronization
-  //
-  // Event handlers registered in useGraphEvents run inside Cytoscape callbacks
-  // that capture refs at registration time. To avoid stale closures, we sync
-  // the latest values into stable refs that the event handlers read through.
-  // ---------------------------------------------------------------------------
-  const currentLevelRef = useRef(currentLevel)
-  useEffect(() => { currentLevelRef.current = currentLevel }, [currentLevel])
-
-  const renderLandingRef = useRef(renderLanding)
-  useEffect(() => { renderLandingRef.current = renderLanding }, [renderLanding])
-
-  const renderExpandedRef = useRef(renderExpanded)
-  useEffect(() => { renderExpandedRef.current = renderExpanded }, [renderExpanded])
-
-  const graphDataRef = useRef(graphData)
-  useEffect(() => { graphDataRef.current = graphData }, [graphData])
-
-  const onNodeSelectRef = useRef(callbacks.onNodeSelect)
-  useEffect(() => { onNodeSelectRef.current = callbacks.onNodeSelect }, [callbacks.onNodeSelect])
-
   // Initialize cytoscape and do initial render when graphData is available
   useEffect(() => {
     if (!containerRef.current || !graphData) return
@@ -175,14 +153,9 @@ export function useGraphNavigation(
 
   return {
     currentLevel,
-    currentLevelRef,
     expandedEntityName,
     cyReady,
     renderLanding,
     renderExpanded,
-    renderLandingRef,
-    renderExpandedRef,
-    graphDataRef,
-    onNodeSelectRef,
   }
 }
