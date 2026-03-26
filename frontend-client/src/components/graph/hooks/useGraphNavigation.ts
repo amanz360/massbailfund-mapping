@@ -36,17 +36,14 @@ export function useGraphNavigation(
   initialFocusNodeId?: string | null,
 ) {
   const [currentLevel, setCurrentLevel] = useState<ViewLevel>('landing')
-  const [expandedMechanismId, setExpandedMechanismId] = useState<string | null>(null)
-  const [expandedDmId, setExpandedDmId] = useState<string | null>(null)
-  const [expandedInstitutionId, setExpandedInstitutionId] = useState<string | null>(null)
+  const [expandedEntityId, setExpandedEntityId] = useState<string | null>(null)
   const [cyReady, setCyReady] = useState(false)
 
   // Derive expanded entity name for breadcrumb
-  const expandedId = expandedMechanismId || expandedDmId || expandedInstitutionId
   const expandedEntityName = useMemo(() => {
-    if (!graphData || !expandedId) return ''
-    return graphData.nodes.find((n) => n.id === expandedId)?.name ?? ''
-  }, [graphData, expandedId])
+    if (!graphData || !expandedEntityId) return ''
+    return graphData.nodes.find((n) => n.id === expandedEntityId)?.name ?? ''
+  }, [graphData, expandedEntityId])
 
   const renderLanding = useCallback(() => {
     if (!cyRef.current || !graphData) return
@@ -62,9 +59,7 @@ export function useGraphNavigation(
     layoutRef.current = layout
 
     setCurrentLevel('landing')
-    setExpandedMechanismId(null)
-    setExpandedDmId(null)
-    setExpandedInstitutionId(null)
+    setExpandedEntityId(null)
     callbacks.onMechanismExpand?.(null)
     callbacks.onDmExpand?.(null)
     callbacks.onInstitutionExpand?.(null)
@@ -110,10 +105,7 @@ export function useGraphNavigation(
 
     // Update state + notify parent
     setCurrentLevel(`expanded-${viewType}`)
-
-    setExpandedMechanismId(viewType === 'mechanism' ? entityId : null)
-    setExpandedDmId(viewType === 'dm' ? entityId : null)
-    setExpandedInstitutionId(viewType === 'institution' ? entityId : null)
+    setExpandedEntityId(entityId)
 
     callbacks.onMechanismExpand?.(viewType === 'mechanism' ? entityId : null)
     callbacks.onDmExpand?.(viewType === 'dm' ? entityId : null)
