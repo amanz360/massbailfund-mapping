@@ -5,18 +5,18 @@ import { applyDotIndicators, computeInstMemberCount, getBestInstitution } from '
 import { DM_SPREAD, seedDmPositions, seedMechanismPositions } from './landingSeeding'
 
 /**
- * Apply dot indicators to DM nodes, color DM borders by primary institution
- * (using instMemberCount to pick best institution), apply institution colors
- * and enlarge institution nodes.
+ * Apply data-driven decorations to all nodes in the graph:
+ * dot indicators and border colors on DMs, background colors on institutions.
+ *
+ * Shared between landing and expanded views so nodes look consistent.
  */
-export function applyDmDecorations(
+export function applyNodeDecorations(
   cy: Core,
   data: GraphData,
   institutionColors: Map<string, string>,
   instMemberCount: Map<string, number>,
   fallbackInstitutionColor: string,
 ): void {
-  // Apply institution dot indicators to DM nodes
   cy.nodes('[primary_type="Decision Maker"]').forEach((node) => {
     applyDotIndicators(node, data, institutionColors)
 
@@ -33,10 +33,8 @@ export function applyDmDecorations(
     }
   })
 
-  // Apply institution colors and landing size class
   cy.nodes('[primary_type="Institution"]').forEach((node) => {
     const color = institutionColors.get(node.id()) || fallbackInstitutionColor
-    node.addClass('landing-institution')
     node.style('background-color', color)
   })
 }
@@ -140,8 +138,9 @@ export function applyLandingLayout(
   // 1. Compute primary member counts per institution (used for DM border color)
   const instMemberCount = computeInstMemberCount(data.memberships)
 
-  // 2. Apply DM decorations (dot indicators, border colors, institution styling)
-  applyDmDecorations(cy, data, institutionColors, instMemberCount, fallbackInstitutionColor)
+  // 2. Apply node decorations (dot indicators, border colors, institution colors)
+  applyNodeDecorations(cy, data, institutionColors, instMemberCount, fallbackInstitutionColor)
+  cy.nodes('[primary_type="Institution"]').addClass('landing-institution')
 
   // 3. Pin institutions at evenly-spaced circle positions
   //    Radius scales with institution count and largest DM cluster.
