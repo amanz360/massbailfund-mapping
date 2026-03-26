@@ -62,6 +62,16 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'border-color': '#ffffff',
     },
   },
+  // Larger institutions in landing view — anchor the layout boundary
+  {
+    selector: 'node.landing-institution',
+    style: {
+      width: '120px',
+      height: '120px',
+      'font-size': '13px',
+      'text-max-width': '90px',
+    },
+  },
   // Center institution in expanded view
   {
     selector: 'node.center-institution',

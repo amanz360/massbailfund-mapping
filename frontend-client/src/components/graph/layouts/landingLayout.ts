@@ -33,16 +33,11 @@ export function applyDmDecorations(
     }
   })
 
-  // Apply institution colors and enlarge institution nodes in landing view
+  // Apply institution colors and landing size class
   cy.nodes('[primary_type="Institution"]').forEach((node) => {
     const color = institutionColors.get(node.id()) || fallbackInstitutionColor
-    node.style({
-      'background-color': color,
-      width: '120px',
-      height: '120px',
-      'font-size': '13px',
-      'text-max-width': '90px',
-    })
+    node.addClass('landing-institution')
+    node.style('background-color', color)
   })
 }
 
