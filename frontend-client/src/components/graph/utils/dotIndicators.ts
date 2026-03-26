@@ -20,7 +20,7 @@ export function computeDmDots(
   data: GraphData,
   institutionColors: Map<string, string>,
 ): string[] {
-  const dots: { uri: string; order: number }[] = []
+  const dots: { uri: string; filled: boolean; name: string }[] = []
 
   for (const m of data.memberships) {
     if (m.member !== dmId) continue
@@ -29,12 +29,15 @@ export function computeDmDots(
 
     const filled = m.membership_type === 'Primary'
     const uri = generateDotSvg(color, filled)
-    // Primary first, then alphabetical by institution id
-    const order = (filled ? 0 : 1) * 100 + (m.institution.charCodeAt(0))
-    dots.push({ uri, order })
+    const inst = data.nodes.find((n) => n.id === m.institution)
+    dots.push({ uri, filled, name: inst?.name ?? '' })
   }
 
-  dots.sort((a, b) => a.order - b.order)
+  // Primary (filled) dots first, then alphabetical by institution name
+  dots.sort((a, b) => {
+    if (a.filled !== b.filled) return a.filled ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
   return dots.map((d) => d.uri)
 }
 
