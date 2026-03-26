@@ -48,7 +48,7 @@ export function nodeElement(
       secondary_type: node.secondary_type,
     },
     ...(options?.classes && { classes: options.classes }),
-    ...(options?.position && { position: options.position }),
+    ...(options?.position && { position: { ...options.position } }),
   }
 }
 

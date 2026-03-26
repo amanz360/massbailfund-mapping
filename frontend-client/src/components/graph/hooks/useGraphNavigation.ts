@@ -141,16 +141,18 @@ export function useGraphNavigation(
     })
     setCyReady(true)
 
-    // Initial render
-    if (initialFocusNodeId) {
-      const node = graphData.nodes.find((n) => n.id === initialFocusNodeId)
-      if (node?.primary_type === 'Mechanism') renderExpanded('mechanism', initialFocusNodeId)
-      else if (node?.primary_type === 'Decision Maker') renderExpanded('dm', initialFocusNodeId)
-      else if (node?.primary_type === 'Institution') renderExpanded('institution', initialFocusNodeId)
-      else renderLanding()
-    } else {
-      renderLanding()
-    }
+    // Defer initial render by one frame so the container has dimensions
+    requestAnimationFrame(() => {
+      if (initialFocusNodeId) {
+        const node = graphData.nodes.find((n) => n.id === initialFocusNodeId)
+        if (node?.primary_type === 'Mechanism') renderExpanded('mechanism', initialFocusNodeId)
+        else if (node?.primary_type === 'Decision Maker') renderExpanded('dm', initialFocusNodeId)
+        else if (node?.primary_type === 'Institution') renderExpanded('institution', initialFocusNodeId)
+        else renderLanding()
+      } else {
+        renderLanding()
+      }
+    })
   // One-time init when graphData first arrives; renderLanding/renderExpanded are stable callbacks
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphData])
