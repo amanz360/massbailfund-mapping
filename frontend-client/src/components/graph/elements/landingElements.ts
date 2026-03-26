@@ -13,6 +13,7 @@ export function buildLandingElements(
   const elements: ElementDefinition[] = []
 
   const origin = { x: 0, y: 0 }
+  const nodeById = new Map(data.nodes.map((n) => [n.id, n]))
 
   // Add mechanism nodes
   for (const node of data.nodes.filter((n) => n.primary_type === 'Mechanism')) {
@@ -31,8 +32,8 @@ export function buildLandingElements(
 
   // Add edges between mechanisms and decision makers
   for (const edge of data.edges) {
-    const sourceNode = data.nodes.find((n) => n.id === edge.source)
-    const targetNode = data.nodes.find((n) => n.id === edge.target)
+    const sourceNode = nodeById.get(edge.source)
+    const targetNode = nodeById.get(edge.target)
     if (!sourceNode || !targetNode) continue
     const types = new Set([sourceNode.primary_type, targetNode.primary_type])
     if (types.has('Mechanism') && types.has('Decision Maker')) {
