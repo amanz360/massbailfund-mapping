@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import cytoscape, { type Core, type Layouts } from 'cytoscape'
-import fcose from 'cytoscape-fcose'
 import type { AppDispatch } from '../../../store/store'
 import type { GraphData } from '../../../types/models'
 import type { ViewLevel, ExpandedViewType } from '../types'
@@ -9,8 +8,6 @@ import { cytoscapeStyles } from '../cytoscape-styles'
 import { buildLandingElements, buildExpandedElements } from '../elements'
 import { applyLandingLayout, computeExpandedPositions, ensureEdgeLabelsFit } from '../layouts'
 import { applyDotIndicators } from '../utils'
-
-cytoscape.use(fcose)
 
 /**
  * Central coordinator for graph view state, Cytoscape lifecycle, and rendering.

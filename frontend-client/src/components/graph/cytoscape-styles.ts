@@ -149,16 +149,6 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'line-dash-pattern': [6, 4] as never,
     },
   },
-  // Invisible gravity edges (mechanism→institution) — layout only, never rendered
-  {
-    selector: 'edge.gravity-edge',
-    style: {
-      opacity: 0,
-      width: 0,
-      'target-arrow-shape': 'none',
-      'events': 'no',
-    },
-  },
   // Landing view mechanism↔DM edges — subtle but visible
   {
     selector: 'edge.landing-edge',
