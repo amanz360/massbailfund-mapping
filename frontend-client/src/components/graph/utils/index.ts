@@ -1,2 +1,2 @@
 export { generateDotSvg, computeDmDots, applyDotIndicators } from './dotIndicators'
-export { computeInstMemberCount, getBestInstitution, getConnectedByType } from './graphHelpers'
+export { nodeElement, computeInstMemberCount, getBestInstitution, getConnectedByType } from './graphHelpers'

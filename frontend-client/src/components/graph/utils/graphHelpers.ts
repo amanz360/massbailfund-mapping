@@ -1,4 +1,5 @@
-import type { GraphData, GraphEdge } from '../../../types/models'
+import type { ElementDefinition } from 'cytoscape'
+import type { GraphData, GraphNode, GraphEdge } from '../../../types/models'
 
 /**
  * Find all nodes of a given type connected to an entity via edges.
@@ -29,6 +30,26 @@ export function getConnectedByType(
     }
   }
   return { nodeIds, edges }
+}
+
+/**
+ * Create a Cytoscape node element from a GraphNode.
+ * Centralizes the data fields so adding a new field only requires one change.
+ */
+export function nodeElement(
+  node: GraphNode,
+  options?: { classes?: string; position?: { x: number; y: number } },
+): ElementDefinition {
+  return {
+    data: {
+      id: node.id,
+      name: node.name,
+      primary_type: node.primary_type,
+      secondary_type: node.secondary_type,
+    },
+    ...(options?.classes && { classes: options.classes }),
+    ...(options?.position && { position: options.position }),
+  }
 }
 
 /**

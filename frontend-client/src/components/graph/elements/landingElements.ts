@@ -1,6 +1,6 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
-import { computeInstMemberCount, getBestInstitution } from '../utils'
+import { nodeElement, computeInstMemberCount, getBestInstitution } from '../utils'
 
 /**
  * Build Level 1 (landing) elements: all mechanisms, decision makers,
@@ -12,45 +12,21 @@ export function buildLandingElements(
 ): ElementDefinition[] {
   const elements: ElementDefinition[] = []
 
+  const origin = { x: 0, y: 0 }
+
   // Add mechanism nodes
   for (const node of data.nodes.filter((n) => n.primary_type === 'Mechanism')) {
-    elements.push({
-      data: {
-        id: node.id,
-        name: node.name,
-        primary_type: node.primary_type,
-        secondary_type: node.secondary_type,
-      },
-      position: { x: 0, y: 0 },
-    })
+    elements.push(nodeElement(node, { position: origin }))
   }
 
   // Add decision maker nodes
-  for (const node of data.nodes) {
-    if (node.primary_type !== 'Decision Maker') continue
-    elements.push({
-      data: {
-        id: node.id,
-        name: node.name,
-        primary_type: node.primary_type,
-        secondary_type: node.secondary_type,
-      },
-      position: { x: 0, y: 0 },
-    })
+  for (const node of data.nodes.filter((n) => n.primary_type === 'Decision Maker')) {
+    elements.push(nodeElement(node, { position: origin }))
   }
 
   // Add institution nodes
-  for (const node of data.nodes) {
-    if (node.primary_type !== 'Institution') continue
-    elements.push({
-      data: {
-        id: node.id,
-        name: node.name,
-        primary_type: node.primary_type,
-        secondary_type: node.secondary_type,
-      },
-      position: { x: 0, y: 0 },
-    })
+  for (const node of data.nodes.filter((n) => n.primary_type === 'Institution')) {
+    elements.push(nodeElement(node, { position: origin }))
   }
 
   // Add edges between mechanisms and decision makers

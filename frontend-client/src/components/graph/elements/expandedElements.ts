@@ -1,7 +1,7 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import type { ExpandedViewType } from '../types'
-import { getConnectedByType } from '../utils'
+import { nodeElement, getConnectedByType } from '../utils'
 
 /**
  * Build expanded-view elements for any of the three expanded views
@@ -31,15 +31,7 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
   const mechanism = data.nodes.find((n) => n.id === mechanismId)
   if (!mechanism) return elements
 
-  elements.push({
-    data: {
-      id: mechanism.id,
-      name: mechanism.name,
-      primary_type: mechanism.primary_type,
-      secondary_type: mechanism.secondary_type,
-    },
-    classes: 'center-mechanism',
-  })
+  elements.push(nodeElement(mechanism, { classes: 'center-mechanism' }))
 
   const { nodeIds: connectedDmIds, edges: relevantEdges } = getConnectedByType(
     mechanismId,
@@ -50,15 +42,7 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
   for (const dmId of connectedDmIds) {
     const dm = data.nodes.find((n) => n.id === dmId)
     if (!dm) continue
-    elements.push({
-      data: {
-        id: dm.id,
-        name: dm.name,
-        primary_type: dm.primary_type,
-        secondary_type: dm.secondary_type,
-      },
-      classes: 'expanded-dm',
-    })
+    elements.push(nodeElement(dm, { classes: 'expanded-dm' }))
   }
 
   for (const edge of relevantEdges) {
@@ -81,14 +65,7 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
         if (!addedInsts.has(m.institution)) {
           const inst = data.nodes.find((n) => n.id === m.institution)
           if (!inst) continue
-          elements.push({
-            data: {
-              id: inst.id,
-              name: inst.name,
-              primary_type: inst.primary_type,
-              secondary_type: inst.secondary_type,
-            },
-          })
+          elements.push(nodeElement(inst))
           addedInsts.add(m.institution)
         }
         elements.push({
@@ -115,15 +92,7 @@ function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
   const dm = data.nodes.find((n) => n.id === dmId)
   if (!dm) return elements
 
-  elements.push({
-    data: {
-      id: dm.id,
-      name: dm.name,
-      primary_type: dm.primary_type,
-      secondary_type: dm.secondary_type,
-    },
-    classes: 'center-dm',
-  })
+  elements.push(nodeElement(dm, { classes: 'center-dm' }))
 
   const { nodeIds: connectedMechIds, edges: relevantEdges } = getConnectedByType(
     dmId,
@@ -134,14 +103,7 @@ function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
   for (const mechId of connectedMechIds) {
     const mech = data.nodes.find((n) => n.id === mechId)
     if (!mech) continue
-    elements.push({
-      data: {
-        id: mech.id,
-        name: mech.name,
-        primary_type: mech.primary_type,
-        secondary_type: mech.secondary_type,
-      },
-    })
+    elements.push(nodeElement(mech))
   }
 
   for (const edge of relevantEdges) {
@@ -161,14 +123,7 @@ function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
     if (m.member === dmId && m.membership_type === 'Primary') {
       const inst = data.nodes.find((n) => n.id === m.institution)
       if (!inst) continue
-      elements.push({
-        data: {
-          id: inst.id,
-          name: inst.name,
-          primary_type: inst.primary_type,
-          secondary_type: inst.secondary_type,
-        },
-      })
+      elements.push(nodeElement(inst))
       elements.push({
         data: {
           id: `dm-inst-${dmId}-${m.institution}`,
@@ -192,15 +147,7 @@ function buildInstitutionExpanded(data: GraphData, institutionId: string): Eleme
   const institution = data.nodes.find((n) => n.id === institutionId)
   if (!institution) return elements
 
-  elements.push({
-    data: {
-      id: institution.id,
-      name: institution.name,
-      primary_type: institution.primary_type,
-      secondary_type: institution.secondary_type,
-    },
-    classes: 'center-institution',
-  })
+  elements.push(nodeElement(institution, { classes: 'center-institution' }))
 
   // Primary DMs of this institution
   const primaryDmIds = data.memberships
@@ -211,15 +158,7 @@ function buildInstitutionExpanded(data: GraphData, institutionId: string): Eleme
   for (const dmId of primaryDmIds) {
     const dm = data.nodes.find((n) => n.id === dmId)
     if (!dm) continue
-    elements.push({
-      data: {
-        id: dm.id,
-        name: dm.name,
-        primary_type: dm.primary_type,
-        secondary_type: dm.secondary_type,
-      },
-      classes: 'expanded-dm',
-    })
+    elements.push(nodeElement(dm, { classes: 'expanded-dm' }))
   }
 
   // Add edges from DMs to institution (arrows point toward institution)
@@ -253,14 +192,7 @@ function buildInstitutionExpanded(data: GraphData, institutionId: string): Eleme
 
     if (!addedMechs.has(mech)) {
       const mechNode = data.nodes.find((n) => n.id === mech)!
-      elements.push({
-        data: {
-          id: mechNode.id,
-          name: mechNode.name,
-          primary_type: mechNode.primary_type,
-          secondary_type: mechNode.secondary_type,
-        },
-      })
+      elements.push(nodeElement(mechNode))
       addedMechs.add(mech)
     }
 
