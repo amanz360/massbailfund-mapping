@@ -36,23 +36,20 @@ export function seedDmPositions(
     if (!bestInstId) return
     const bestPos = instPositions.get(bestInstId)
 
-    const primaryInsts =
-      data?.memberships
-        .filter((m) => m.member === node.id() && m.membership_type === 'Primary')
-        .map((m) => m.institution) ?? []
+    const primaryInsts = data.memberships
+      .filter((m) => m.member === node.id() && m.membership_type === 'Primary')
+      .map((m) => m.institution)
     if (!bestPos) return
 
     const secondaryIds = primaryInsts.filter((id) => id !== bestInstId).sort()
-    const externalIds = (
-      data?.memberships
-        .filter(
-          (m) =>
-            m.member === node.id() &&
-            m.membership_type === 'External' &&
-            m.institution !== bestInstId,
-        )
-        .map((m) => m.institution) ?? []
-    )
+    const externalIds = data.memberships
+      .filter(
+        (m) =>
+          m.member === node.id() &&
+          m.membership_type === 'External' &&
+          m.institution !== bestInstId,
+      )
+      .map((m) => m.institution)
       .filter((id) => !secondaryIds.includes(id))
       .sort()
     // Corridor key: best institution + sorted secondary + external institutions
