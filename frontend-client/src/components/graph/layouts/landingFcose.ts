@@ -1,8 +1,7 @@
 import type { Core } from 'cytoscape'
 import type cytoscape from 'cytoscape'
 import type { GraphData } from '../../../types/models'
-import { applyDotIndicators } from '../utils/dotIndicators'
-import { computeInstMemberCount, getBestInstitution } from '../utils/graphHelpers'
+import { applyDotIndicators, computeInstMemberCount, getBestInstitution } from '../utils'
 import { seedDmPositions, seedMechanismPositions } from './landingSeeding'
 import type { MechCorridors } from './landingSeeding'
 

@@ -1,6 +1,6 @@
 import type { GraphData } from '../../../types/models'
 import type { ExpandedViewType } from '../types'
-import { getConnectedByType } from '../utils/graphHelpers'
+import { getConnectedByType } from '../utils'
 
 type Position = { x: number; y: number }
 

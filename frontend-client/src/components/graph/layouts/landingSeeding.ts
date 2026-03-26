@@ -1,7 +1,7 @@
 import type { Core } from 'cytoscape'
 import type cytoscape from 'cytoscape'
 import type { GraphData } from '../../../types/models'
-import { getBestInstitution } from '../utils/graphHelpers'
+import { getBestInstitution } from '../utils'
 
 export type MechCorridors = Map<
   string,

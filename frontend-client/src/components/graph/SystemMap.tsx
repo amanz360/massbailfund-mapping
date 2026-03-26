@@ -5,13 +5,8 @@ import type { AppDispatch } from '../../store/store'
 import { selectGraphData, selectGraphLoading } from '../../store/slices/graphSlice'
 import { buildInstitutionColorsFromGraph } from '../../utils/entities'
 import type { SystemMapProps } from './types'
-import { useCytoscapeInstance } from './hooks/useCytoscapeInstance'
-import { useGraphNavigation } from './hooks/useGraphNavigation'
-import { useGraphEvents } from './hooks/useGraphEvents'
-import { HelpOverlay, HELP_STORAGE_KEY } from './ui/HelpOverlay'
-import { GraphBreadcrumb } from './ui/GraphBreadcrumb'
-import { GraphLegend } from './ui/GraphLegend'
-import { GraphControls } from './ui/GraphControls'
+import { useCytoscapeInstance, useGraphNavigation, useGraphEvents } from './hooks'
+import { HelpOverlay, HELP_STORAGE_KEY, GraphBreadcrumb, GraphLegend, GraphControls } from './ui'
 
 export default function SystemMap({
   onNodeSelect,

@@ -7,12 +7,9 @@ import type { GraphData } from '../../../types/models'
 import type { ViewLevel, ExpandedViewType } from '../types'
 import { selectEntity, clearDetail } from '../../../store/slices/detailSlice'
 import { cytoscapeStyles } from '../cytoscape-styles'
-import { buildLandingElements } from '../elements/landingElements'
-import { buildExpandedElements } from '../elements/expandedElements'
-import { applyLandingLayout } from '../layouts/landingFcose'
-import { computeExpandedPositions } from '../layouts/expandedLayout'
-import { ensureEdgeLabelsFit } from '../layouts/edgeLabelSpacing'
-import { applyDotIndicators } from '../utils/dotIndicators'
+import { buildLandingElements, buildExpandedElements } from '../elements'
+import { applyLandingLayout, computeExpandedPositions, ensureEdgeLabelsFit } from '../layouts'
+import { applyDotIndicators } from '../utils'
 
 cytoscape.use(fcose)
 

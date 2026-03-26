@@ -1,6 +1,6 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
-import { computeInstMemberCount, getBestInstitution } from '../utils/graphHelpers'
+import { computeInstMemberCount, getBestInstitution } from '../utils'
 
 /**
  * Build Level 1 (landing) elements: all mechanisms, decision makers,

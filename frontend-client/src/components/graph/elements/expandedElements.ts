@@ -1,7 +1,7 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import type { ExpandedViewType } from '../types'
-import { getConnectedByType } from '../utils/graphHelpers'
+import { getConnectedByType } from '../utils'
 
 /**
  * Build expanded-view elements for any of the three expanded views
