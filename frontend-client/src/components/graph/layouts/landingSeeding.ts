@@ -3,21 +3,11 @@ import type cytoscape from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import { getBestInstitution } from '../utils'
 
-export type MechCorridors = Map<
-  string,
-  {
-    center: { x: number; y: number }
-    direction: { dx: number; dy: number }
-    nodes: cytoscape.NodeSingular[]
-  }
->
-
 const DM_OFFSET = 130 // px from institution center to first DM along corridor direction
 const DM_SPREAD = 70 // perpendicular spacing between DMs — nudge pass separates overlaps
 const EXTERNAL_WEIGHT = 0.3 // pull weight for external memberships (vs 1.0 for primary)
 
-const MECH_SPREAD = 70 // perpendicular spacing between mechanisms — nudge pass separates overlaps
-const PERIPHERAL_PUSH = 140 // px to push single-institution mechanisms past their institution
+const MECH_SPREAD = 70 // tangent spacing between single-institution mechanisms on the arc
 
 /**
  * Seed DM node positions deterministically from institutional memberships.
@@ -123,11 +113,6 @@ export function seedDmPositions(
 }
 
 /**
- * Seed mechanism node positions: average connected DM positions, push away from
- * missing institutions, then fan out perpendicular to corridor direction.
- * Returns the mechCorridors map needed by buildPlacementConstraints.
- */
-/**
  * Compute institution affinity for a mechanism: count how many of its
  * connected DMs have each institution as their "best" institution.
  * Returns a map of institution ID → DM count (the affinity weight).
@@ -151,13 +136,28 @@ function computeMechInstAffinity(
   return affinity
 }
 
+/**
+ * Seed mechanism positions from connected DM positions.
+ *
+ * Multi-institution mechanisms sit at the weighted average of their
+ * connected DMs — unique DM connections produce natural spread,
+ * and the nudge pass resolves any remaining overlaps.
+ *
+ * Single-institution mechanisms are placed alongside their institution
+ * on the circle arc, slightly inside the institution radius so
+ * institutions define the graph boundary.
+ */
 export function seedMechanismPositions(
   cy: Core,
   data: GraphData,
   instPositions: Map<string, { x: number; y: number }>,
   instMemberCount: Map<string, number>,
-): MechCorridors {
-  const mechCorridors: MechCorridors = new Map()
+): void {
+  // Collect single-institution mechanisms by institution for arc placement
+  const singleInstGroups = new Map<
+    string,
+    { nodes: cytoscape.NodeSingular[]; dmSumX: number; dmSumY: number }
+  >()
 
   cy.nodes('[primary_type="Mechanism"]').forEach((node) => {
     const connectedDMs = node
@@ -166,9 +166,8 @@ export function seedMechanismPositions(
       .filter((n) => n.id() !== node.id())
     if (connectedDMs.length === 0) return
 
-    // Compute institution affinity from the data model (not graph edges)
     const instAffinity = computeMechInstAffinity(node.id(), data, instMemberCount)
-    const instIds = [...instAffinity.keys()].sort()
+    const instIds = [...instAffinity.keys()]
 
     // Weighted average of connected DM positions (weighted by institution affinity)
     let ax = 0,
@@ -185,71 +184,52 @@ export function seedMechanismPositions(
     ax /= totalW || 1
     ay /= totalW || 1
 
-    const corridorKey = instIds.join(',')
-    if (!mechCorridors.has(corridorKey)) {
-      mechCorridors.set(corridorKey, {
-        center: { x: ax, y: ay },
-        direction: { dx: ax, dy: ay },
-        nodes: [],
-      })
+    if (instIds.length === 1) {
+      // Single-institution: collect for arc placement below
+      const instId = instIds[0]
+      if (!singleInstGroups.has(instId)) {
+        singleInstGroups.set(instId, { nodes: [], dmSumX: 0, dmSumY: 0 })
+      }
+      const group = singleInstGroups.get(instId)!
+      group.nodes.push(node)
+      group.dmSumX += ax
+      group.dmSumY += ay
+    } else {
+      // Multi-institution: place at DM-weighted average directly
+      node.position({ x: ax, y: ay })
     }
-    mechCorridors.get(corridorKey)!.nodes.push(node)
-
-    // Store this node's computed base position for the spread pass
-    node.scratch('_seedBase', { x: ax, y: ay })
   })
 
-  // Apply perpendicular spread within each corridor.
-  // Single-institution corridors get placed alongside their institution on the
-  // circle's arc; multi-institution corridors use the weighted DM average.
-  for (const [key, { direction, nodes }] of mechCorridors) {
-    const instCount = key.split(',').length
+  // Place single-institution mechanisms alongside their institution on the
+  // circle arc, slightly inside the radius so institutions define the boundary.
+  for (const [instId, group] of singleInstGroups) {
+    const instPos = instPositions.get(instId)
+    if (!instPos) continue
 
-    // Single-institution corridor: compute a shared arc position so all
-    // mechanisms in this corridor cluster together beside their institution.
-    if (instCount === 1) {
-      const instPos = instPositions.get(key)
-      if (instPos) {
-        const instAngle = Math.atan2(instPos.y, instPos.x)
-        const instRadius = Math.sqrt(instPos.x * instPos.x + instPos.y * instPos.y)
-        // Use the group's average DM direction to pick which side of institution
-        let avgDmX = 0, avgDmY = 0
-        nodes.forEach((n) => { const b = n.scratch('_seedBase') as { x: number; y: number }; avgDmX += b.x; avgDmY += b.y })
-        avgDmX /= nodes.length; avgDmY /= nodes.length
-        const dmAngle = Math.atan2(avgDmY, avgDmX)
-        const side = Math.sin(dmAngle - instAngle) >= 0 ? 1 : -1
-        const offsetAngle = instAngle + side * 0.35 // ~20° arc offset
-        const base = { x: Math.cos(offsetAngle) * instRadius, y: Math.sin(offsetAngle) * instRadius }
+    const instAngle = Math.atan2(instPos.y, instPos.x)
+    const instRadius = Math.sqrt(instPos.x * instPos.x + instPos.y * instPos.y)
 
-        // Spread along the arc tangent (perpendicular to radial direction)
-        const tdx = -Math.sin(offsetAngle)
-        const tdy = Math.cos(offsetAngle)
-        nodes.forEach((node, i) => {
-          const perpOffset = (i - (nodes.length - 1) / 2) * MECH_SPREAD
-          node.position({ x: base.x + tdx * perpOffset, y: base.y + tdy * perpOffset })
-          node.removeScratch('_seedBase')
-        })
-        continue
-      }
+    // Use the group's average DM direction to pick which side of institution
+    const avgDmX = group.dmSumX / group.nodes.length
+    const avgDmY = group.dmSumY / group.nodes.length
+    const dmAngle = Math.atan2(avgDmY, avgDmX)
+    const side = Math.sin(dmAngle - instAngle) >= 0 ? 1 : -1
+    const offsetAngle = instAngle + side * 0.45 // ~26° arc offset
+    const arcRadius = instRadius * 0.85
+    const base = {
+      x: Math.cos(offsetAngle) * arcRadius,
+      y: Math.sin(offsetAngle) * arcRadius,
     }
 
-    // Multi-institution corridor: spread perpendicular to corridor direction
-    const len = Math.sqrt(direction.dx * direction.dx + direction.dy * direction.dy) || 1
-    const ndx = direction.dx / len
-    const ndy = direction.dy / len
-    const pdx = -ndy
-    const pdy = ndx
-
-    nodes.forEach((node, i) => {
-      const base = node.scratch('_seedBase') as { x: number; y: number }
-      const perpOffset = (i - (nodes.length - 1) / 2) * MECH_SPREAD
+    // Spread along the arc tangent (perpendicular to radial direction)
+    const tdx = -Math.sin(offsetAngle)
+    const tdy = Math.cos(offsetAngle)
+    group.nodes.forEach((node, i) => {
+      const perpOffset = (i - (group.nodes.length - 1) / 2) * MECH_SPREAD
       node.position({
-        x: base.x + pdx * perpOffset,
-        y: base.y + pdy * perpOffset,
+        x: base.x + tdx * perpOffset,
+        y: base.y + tdy * perpOffset,
       })
-      node.removeScratch('_seedBase')
     })
   }
-
-  return mechCorridors
 }
