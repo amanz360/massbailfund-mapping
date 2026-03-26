@@ -46,8 +46,9 @@ npm --version
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Dev server (uses deployed API) |
+| `npm run dev` | Dev server (default API URL) |
 | `npm run dev:local` | Dev server pointing at local backend (port 8090) |
+| `npm run dev:live` | Dev server proxying to deployed API (avoids CORS) |
 | `npm run build` | Production build (TypeScript check + Vite build) |
 | `npm run lint` | ESLint check |
 | `npm run preview` | Preview the production build locally |
@@ -77,14 +78,13 @@ frontend-client/
 │   ├── contexts/
 │   │   └── BrowseDataContext.ts # Browse data context + useBrowseData hook
 │   ├── components/
-│   │   ├── graph/             # System map components (Cytoscape, detail panel)
+│   │   ├── graph/             # System map graph (see "Graph Architecture" below)
 │   │   ├── search/            # Search bar component
 │   │   └── layout/            # Layout and error boundary
 │   ├── themes/
 │   │   └── theme.ts           # MUI theme customization
 │   ├── types/
-│   │   ├── models.ts          # TypeScript interfaces for API data
-│   │   └── general.d.ts       # General type declarations
+│   │   └── models.ts          # TypeScript interfaces for API data
 │   └── utils/
 │       └── entities.ts        # Data transformation utilities
 ├── vite.config.ts             # Vite config (React plugin, Emotion JSX)
@@ -138,11 +138,67 @@ To add new state:
 
 ### Modifying the system map graph
 
-The graph visualization uses Cytoscape.js:
+The graph visualization uses [Cytoscape.js](https://js.cytoscape.org/) and lives in `src/components/graph/`. It's organized into focused modules so you can find and modify any aspect without reading the whole system.
 
-- **`SystemMap.tsx`** — Main component: initializes Cytoscape, handles layout and interactions
-- **`cytoscape-styles.ts`** — Node/edge visual styles (colors, shapes, sizes by entity type)
-- **`DetailPanel.tsx`** — Side panel showing details for the selected node
+**Start here:** `SystemMap.tsx` is the orchestrator (~145 lines). It wires together hooks, UI overlays, and the Cytoscape container. Read it to understand the overall flow, then follow imports into whichever module you need.
+
+#### Graph architecture
+
+```
+components/graph/
+  SystemMap.tsx           # Orchestrator — wires hooks + UI components
+  types.ts                # Shared types (ViewLevel, ExpandedViewType, SystemMapProps)
+  cytoscape-styles.ts     # Node/edge visual styles (colors, shapes, sizes)
+
+  hooks/
+    useGraphNavigation.ts # View state, Cytoscape lifecycle, render dispatch
+    useGraphEvents.ts     # Click, double-click, hover, keyboard handlers
+
+  layouts/                # Position computation (no React, no Cytoscape dependency)
+    landingFcose.ts       # Landing view: fcose layout pipeline orchestrator
+    landingSeeding.ts     # Landing view: DM + mechanism corridor seeding
+    expandedLayout.ts     # Expanded views: tripartite layout (mechanism/DM/institution)
+    edgeLabelSpacing.ts   # Post-layout edge label gap enforcement
+
+  elements/               # Cytoscape element construction (pure functions)
+    landingElements.ts    # Build nodes + edges for landing view
+    expandedElements.ts   # Build nodes + edges for any expanded view
+
+  ui/                     # Presentational overlays (standard React components)
+    GraphControls.tsx     # Zoom in/out, fit-all, help buttons
+    GraphLegend.tsx       # Node shapes + institution color key
+    GraphBreadcrumb.tsx   # "← System Map / Entity" navigation
+    HelpOverlay.tsx       # First-visit hint
+
+  utils/
+    dotIndicators.ts      # DM institution dot SVG indicators
+    graphHelpers.ts       # Shared utilities (node creation, edge traversal, institution heuristics)
+```
+
+#### Common graph tasks
+
+| Task | Where to look |
+|------|--------------|
+| Change how the landing layout arranges nodes | `layouts/landingFcose.ts` (pipeline) and `layouts/landingSeeding.ts` (position seeding) |
+| Change what happens when you click a node | `hooks/useGraphEvents.ts` — tap handler |
+| Change hover highlighting behavior | `hooks/useGraphEvents.ts` — mouseover handler |
+| Modify the legend | `ui/GraphLegend.tsx` — self-contained, no graph knowledge needed |
+| Change node/edge colors or shapes | `cytoscape-styles.ts` |
+| Change which nodes/edges appear in a view | `elements/landingElements.ts` or `elements/expandedElements.ts` |
+| Change how expanded views position nodes | `layouts/expandedLayout.ts` |
+| Adjust the detail panel | `DetailPanel.tsx` (separate from the graph system) |
+
+#### How the graph works
+
+1. **Data** arrives from `/api/v1/graph/` via Redux (`graphSlice.ts`). It contains nodes (Mechanism, Decision Maker, Institution), edges (relationships between them), and memberships (DM-to-institution affiliations).
+
+2. **Elements** are built from this data by pure functions in `elements/`. Each function returns a Cytoscape `ElementDefinition[]` array — the nodes and edges that should appear in the graph.
+
+3. **Layouts** compute where nodes should be positioned. The landing view uses the [fcose](https://github.com/iVis-at-Bilkent/cytoscape.js-fcose) physics-based layout with seeded initial positions. Expanded views use a tripartite layout (focus entity + two groups).
+
+4. **Events** handle user interaction. Click navigates between views, double-click drills deeper, hover highlights related nodes.
+
+5. **UI overlays** (legend, breadcrumb, controls, help) are standard React components layered on top of the Cytoscape canvas.
 
 Graph data comes from the `/api/v1/graph/` endpoint via `graphSlice.ts`. Nodes have `primary_type` (Mechanism, Decision Maker, Institution) and `secondary_type` for styling.
 
