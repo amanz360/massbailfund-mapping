@@ -11,6 +11,15 @@ interface GraphControlsProps {
   onToggleHelp: () => void
 }
 
+const controlButtonSx = {
+  backgroundColor: 'background.paper',
+  border: '1px solid',
+  borderColor: 'divider',
+  '&:hover': { backgroundColor: 'background.paper' },
+  width: 36,
+  height: 36,
+} as const
+
 export const GraphControls = ({ cyRef, onToggleHelp }: GraphControlsProps) => {
   const handleZoomIn = useCallback(() => {
     if (!cyRef.current) return
@@ -41,65 +50,16 @@ export const GraphControls = ({ cyRef, onToggleHelp }: GraphControlsProps) => {
         zIndex: 10,
       }}
     >
-      <IconButton
-        onClick={handleZoomIn}
-        size="small"
-        aria-label="Zoom in"
-        sx={{
-          backgroundColor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          '&:hover': { backgroundColor: 'background.paper' },
-          width: 36,
-          height: 36,
-        }}
-      >
+      <IconButton onClick={handleZoomIn} size="small" aria-label="Zoom in" sx={controlButtonSx}>
         <AddIcon fontSize="small" />
       </IconButton>
-      <IconButton
-        onClick={handleZoomOut}
-        size="small"
-        aria-label="Zoom out"
-        sx={{
-          backgroundColor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          '&:hover': { backgroundColor: 'background.paper' },
-          width: 36,
-          height: 36,
-        }}
-      >
+      <IconButton onClick={handleZoomOut} size="small" aria-label="Zoom out" sx={controlButtonSx}>
         <RemoveIcon fontSize="small" />
       </IconButton>
-      <IconButton
-        onClick={handleFitAll}
-        size="small"
-        aria-label="Fit all nodes in view"
-        sx={{
-          backgroundColor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          '&:hover': { backgroundColor: 'background.paper' },
-          width: 36,
-          height: 36,
-        }}
-      >
+      <IconButton onClick={handleFitAll} size="small" aria-label="Fit all nodes in view" sx={controlButtonSx}>
         <ZoomOutMapIcon fontSize="small" />
       </IconButton>
-      <IconButton
-        onClick={onToggleHelp}
-        size="small"
-        aria-label="Show help"
-        sx={{
-          backgroundColor: 'background.paper',
-          border: '1px solid',
-          borderColor: 'divider',
-          '&:hover': { backgroundColor: 'background.paper' },
-          width: 36,
-          height: 36,
-          mt: 1,
-        }}
-      >
+      <IconButton onClick={onToggleHelp} size="small" aria-label="Show help" sx={{ ...controlButtonSx, mt: 1 }}>
         <HelpOutlineIcon fontSize="small" />
       </IconButton>
     </Box>
