@@ -13,6 +13,7 @@ export function buildLandingElements(
   const elements: ElementDefinition[] = []
 
   const origin = { x: 0, y: 0 }
+  const nodeById = new Map(data.nodes.map((n) => [n.id, n]))
 
   // Add mechanism nodes
   for (const node of data.nodes.filter((n) => n.primary_type === 'Mechanism')) {
@@ -31,8 +32,8 @@ export function buildLandingElements(
 
   // Add edges between mechanisms and decision makers
   for (const edge of data.edges) {
-    const sourceNode = data.nodes.find((n) => n.id === edge.source)
-    const targetNode = data.nodes.find((n) => n.id === edge.target)
+    const sourceNode = nodeById.get(edge.source)
+    const targetNode = nodeById.get(edge.target)
     if (!sourceNode || !targetNode) continue
     const types = new Set([sourceNode.primary_type, targetNode.primary_type])
     if (types.has('Mechanism') && types.has('Decision Maker')) {
@@ -71,7 +72,7 @@ export function buildLandingElements(
       classes: 'membership-edge',
     })
   }
-  // Secondary membership edges (non-best primary memberships) — hidden but affect layout
+  // Secondary membership edges (non-best primary memberships) — hidden, revealed on DM hover
   for (const m of data.memberships) {
     if (m.membership_type !== 'Primary') continue
     const best = dmBestInst.get(m.member)
@@ -85,38 +86,6 @@ export function buildLandingElements(
       },
       classes: 'hidden-membership-edge',
     })
-  }
-
-  // Add invisible gravity edges from mechanisms to institutions.
-  // For each mechanism, count how many of its DMs belong to each institution
-  // (using the same "best institution" heuristic). This lets fcose naturally
-  // position mechanisms between the institutions their DMs belong to.
-  const mechNodes = data.nodes.filter((n) => n.primary_type === 'Mechanism')
-  for (const mech of mechNodes) {
-    // Count DMs per institution for this mechanism
-    const instAffinity = new Map<string, number>()
-    for (const edge of data.edges) {
-      const dmId = edge.source === mech.id ? edge.target : edge.target === mech.id ? edge.source : null
-      if (!dmId) continue
-      const dmNode = data.nodes.find((n) => n.id === dmId)
-      if (dmNode?.primary_type !== 'Decision Maker') continue
-      const bestInstId = getBestInstitution(dmId, data.memberships, instCounts)
-      if (bestInstId) {
-        instAffinity.set(bestInstId, (instAffinity.get(bestInstId) ?? 0) + 1)
-      }
-    }
-    // Add an invisible edge to each institution with affinity > 0
-    for (const [instId, count] of instAffinity) {
-      elements.push({
-        data: {
-          id: `gravity-${mech.id}-${instId}`,
-          source: mech.id,
-          target: instId,
-          _gravityWeight: count,
-        },
-        classes: 'gravity-edge',
-      })
-    }
   }
 
   return elements

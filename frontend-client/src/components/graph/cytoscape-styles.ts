@@ -62,6 +62,16 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'border-color': '#ffffff',
     },
   },
+  // Larger institutions in landing view — anchor the layout boundary
+  {
+    selector: 'node.landing-institution',
+    style: {
+      width: '120px',
+      height: '120px',
+      'font-size': '13px',
+      'text-max-width': '90px',
+    },
+  },
   // Center institution in expanded view
   {
     selector: 'node.center-institution',
@@ -147,16 +157,6 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'target-arrow-shape': 'triangle',
       'line-style': 'dashed',
       'line-dash-pattern': [6, 4] as never,
-    },
-  },
-  // Invisible gravity edges (mechanism→institution) — layout only, never rendered
-  {
-    selector: 'edge.gravity-edge',
-    style: {
-      opacity: 0,
-      width: 0,
-      'target-arrow-shape': 'none',
-      'events': 'no',
     },
   },
   // Landing view mechanism↔DM edges — subtle but visible

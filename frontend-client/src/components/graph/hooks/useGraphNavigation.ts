@@ -1,16 +1,13 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import cytoscape, { type Core, type Layouts } from 'cytoscape'
-import fcose from 'cytoscape-fcose'
 import type { AppDispatch } from '../../../store/store'
 import type { GraphData } from '../../../types/models'
 import type { ViewLevel, ExpandedViewType } from '../types'
 import { selectEntity, clearDetail } from '../../../store/slices/detailSlice'
 import { cytoscapeStyles } from '../cytoscape-styles'
 import { buildLandingElements, buildExpandedElements } from '../elements'
-import { applyLandingLayout, computeExpandedPositions, ensureEdgeLabelsFit } from '../layouts'
-import { applyDotIndicators } from '../utils'
-
-cytoscape.use(fcose)
+import { applyLandingLayout, applyNodeDecorations, computeExpandedPositions, ensureEdgeLabelsFit } from '../layouts'
+import { computeInstMemberCount } from '../utils'
 
 /**
  * Central coordinator for graph view state, Cytoscape lifecycle, and rendering.
@@ -92,14 +89,9 @@ export function useGraphNavigation(
     const elements = buildExpandedElements(viewType, entityId, graphData)
     cy.add(elements)
 
-    // Apply decorations
-    cy.nodes('[primary_type="Decision Maker"]').forEach((node) => {
-      applyDotIndicators(node, graphData, institutionColors)
-    })
-    cy.nodes('[primary_type="Institution"]').forEach((node) => {
-      const color = institutionColors.get(node.id()) || fallbackInstitutionColor
-      node.style('background-color', color)
-    })
+    // Apply decorations (same as landing — consistent node styling across views)
+    const instMemberCount = computeInstMemberCount(graphData.memberships)
+    applyNodeDecorations(cy, graphData, institutionColors, instMemberCount, fallbackInstitutionColor)
 
     const positions = computeExpandedPositions(viewType, entityId, graphData)
     const layout = cy.layout({

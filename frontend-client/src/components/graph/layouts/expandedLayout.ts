@@ -4,6 +4,15 @@ import { getConnectedByType } from '../utils'
 
 type Position = { x: number; y: number }
 
+// Shared expanded-view layout constants
+const ARC_VERT_SPACING = 95 // vertical gap between mechanism nodes on the parabolic arc
+const ARC_BASE_DIST = 200 // minimum horizontal distance from center column to arc
+
+/** DM vertical spacing: generous when few, compact when many. */
+function dmSpacing(count: number): number {
+  return count <= 4 ? 120 : Math.max(110, Math.ceil(480 / count))
+}
+
 /**
  * Barycenter heuristic: iteratively reorder two groups (A and B) so that
  * each element is placed at the average rank of its neighbours in the
@@ -162,7 +171,7 @@ function computeMechanism(
   positions.set(mechanismId, { x: 250, y: 0 })
 
   // DMs in vertical stack at centre
-  const DM_SPACING = DM_COUNT <= 4 ? 120 : Math.max(110, Math.ceil(480 / DM_COUNT))
+  const DM_SPACING = dmSpacing(DM_COUNT)
   const dmTotalHeight = (DM_COUNT - 1) * DM_SPACING
   for (const { id, x, y } of verticalStack(dmOrder, 0, DM_SPACING)) {
     positions.set(id, { x, y })
@@ -212,11 +221,9 @@ function computeDm(
   const INST_COUNT = instIds.length
 
   // Mechanisms: parabolic arc on the right
-  const VERT_SPACING = 95 // vertical gap between mechanism nodes
-  const BASE_DIST = 200 // minimum horizontal distance from center DM to mechanism arc
-  const CURVE = Math.min(100, MECH_COUNT * 14) // parabolic bulge — grows with mechanism count, capped at 100px
+  const CURVE = Math.min(100, MECH_COUNT * 14)
 
-  for (const { id, x, y } of parabolicArc(mechIds, VERT_SPACING, BASE_DIST, CURVE)) {
+  for (const { id, x, y } of parabolicArc(mechIds, ARC_VERT_SPACING, ARC_BASE_DIST, CURVE)) {
     positions.set(id, { x, y })
   }
 
@@ -314,17 +321,15 @@ function computeInstitution(
   positions.set(institutionId, { x: -200, y: 0 })
 
   // DMs in vertical stack at centre
-  const DM_SPACING = DM_COUNT <= 4 ? 120 : Math.max(110, Math.ceil(480 / DM_COUNT))
+  const DM_SPACING = dmSpacing(DM_COUNT)
   for (const { id, x, y } of verticalStack(dmOrder, 0, DM_SPACING)) {
     positions.set(id, { x, y })
   }
 
   // Mechanisms: parabolic arc on the right
-  const VERT_SPACING = 95
-  const BASE_DIST = 200
   const CURVE = Math.min(100, MECH_COUNT * 14)
 
-  for (const { id, x, y } of parabolicArc(mechOrder, VERT_SPACING, BASE_DIST, CURVE)) {
+  for (const { id, x, y } of parabolicArc(mechOrder, ARC_VERT_SPACING, ARC_BASE_DIST, CURVE)) {
     positions.set(id, { x, y })
   }
 

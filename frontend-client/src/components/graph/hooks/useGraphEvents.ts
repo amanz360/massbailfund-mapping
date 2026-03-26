@@ -100,7 +100,7 @@ export function useGraphEvents(
 
     // --- Edge hover handlers ---
     cy.on('mouseover', 'edge', (evt) => {
-      if (currentLevelRef.current === 'landing' && !evt.target.hasClass('gravity-edge') && !evt.target.hasClass('hidden-membership-edge')) {
+      if (currentLevelRef.current === 'landing' && !evt.target.hasClass('hidden-membership-edge')) {
         evt.target.addClass('hover-edge')
       }
     })
@@ -134,7 +134,7 @@ export function useGraphEvents(
           if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
         })
         cy.edges().forEach((e) => {
-          if (e.hasClass('gravity-edge') || e.hasClass('hidden-membership-edge')) return
+          if (e.hasClass('hidden-membership-edge')) return
           const src = e.data('source')
           const tgt = e.data('target')
           if (e.hasClass('membership-edge')) {
@@ -172,7 +172,7 @@ export function useGraphEvents(
           if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
         })
         cy.edges().forEach((e) => {
-          if (e.hasClass('gravity-edge') || e.hasClass('hidden-membership-edge')) return
+          if (e.hasClass('hidden-membership-edge')) return
           const src = e.data('source')
           const tgt = e.data('target')
           if (e.hasClass('membership-edge')) {
@@ -210,10 +210,9 @@ export function useGraphEvents(
           if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
         })
         cy.edges().forEach((e) => {
-          if (e.hasClass('gravity-edge')) return
           const src = e.data('source')
           const tgt = e.data('target')
-          // Show both visible and hidden membership edges for this DM
+          // Reveal hidden membership edges for this DM so all primary institutions show
           if (e.hasClass('membership-edge') || e.hasClass('hidden-membership-edge')) {
             if ((src === dmId && instIds.has(tgt)) || (tgt === dmId && instIds.has(src))) {
               if (e.hasClass('hidden-membership-edge')) e.addClass('revealed')
@@ -227,7 +226,7 @@ export function useGraphEvents(
       }
 
       // Default: highlight direct neighbors (for expanded views)
-      const connectedEdges = node.connectedEdges().filter((e: cytoscape.EdgeSingular) => !e.hasClass('gravity-edge') && !e.hasClass('hidden-membership-edge'))
+      const connectedEdges = node.connectedEdges().filter((e: cytoscape.EdgeSingular) => !e.hasClass('hidden-membership-edge'))
       const connectedNodes = connectedEdges.connectedNodes()
 
       cy.elements().addClass('dimmed')

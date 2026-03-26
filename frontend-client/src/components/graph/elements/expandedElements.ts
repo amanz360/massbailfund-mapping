@@ -191,7 +191,8 @@ function buildInstitutionExpanded(data: GraphData, institutionId: string): Eleme
     if (!dm || !mech) continue
 
     if (!addedMechs.has(mech)) {
-      const mechNode = data.nodes.find((n) => n.id === mech)!
+      const mechNode = data.nodes.find((n) => n.id === mech)
+      if (!mechNode) continue
       elements.push(nodeElement(mechNode))
       addedMechs.add(mech)
     }
