@@ -1,4 +1,4 @@
-export type ViewLevel = 'landing' | 'expanded' | 'expanded-dm' | 'expanded-institution'
+export type ViewLevel = 'landing' | 'expanded-mechanism' | 'expanded-dm' | 'expanded-institution'
 export type ExpandedViewType = 'mechanism' | 'dm' | 'institution'
 
 export interface SystemMapProps {

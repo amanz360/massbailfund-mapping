@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import type { MutableRefObject, RefObject } from 'react'
 import cytoscape, { type Core, type Layouts } from 'cytoscape'
 import fcose from 'cytoscape-fcose'
@@ -42,14 +42,11 @@ export function useGraphNavigation(
   const [cyReady, setCyReady] = useState(false)
 
   // Derive expanded entity name for breadcrumb
-  const expandedEntityName = (() => {
-    if (!graphData) return ''
-    const expandedId = expandedMechanismId || expandedDmId || expandedInstitutionId
-    if (expandedId) {
-      return graphData.nodes.find((n) => n.id === expandedId)?.name ?? ''
-    }
-    return ''
-  })()
+  const expandedId = expandedMechanismId || expandedDmId || expandedInstitutionId
+  const expandedEntityName = useMemo(() => {
+    if (!graphData || !expandedId) return ''
+    return graphData.nodes.find((n) => n.id === expandedId)?.name ?? ''
+  }, [graphData, expandedId])
 
   const renderLanding = useCallback(() => {
     if (!cyRef.current || !graphData) return
@@ -112,8 +109,7 @@ export function useGraphNavigation(
     })
 
     // Update state + notify parent
-    const levelMap = { mechanism: 'expanded', dm: 'expanded-dm', institution: 'expanded-institution' } as const
-    setCurrentLevel(levelMap[viewType])
+    setCurrentLevel(`expanded-${viewType}`)
 
     setExpandedMechanismId(viewType === 'mechanism' ? entityId : null)
     setExpandedDmId(viewType === 'dm' ? entityId : null)

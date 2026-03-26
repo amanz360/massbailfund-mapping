@@ -50,10 +50,10 @@ export function useGraphEvents(
       // Expanded views: select entity for detail panel
       // DM clicks toggle active-dm class (in mechanism and institution views)
       if (nodeData.primary_type === 'Decision Maker' &&
-          (currentLevelRef.current === 'expanded' || currentLevelRef.current === 'expanded-institution')) {
+          (currentLevelRef.current === 'expanded-mechanism' || currentLevelRef.current === 'expanded-institution')) {
         evt.target.cy().nodes('.active-dm').removeClass('active-dm')
         evt.target.addClass('active-dm')
-      } else if (nodeData.primary_type === 'Mechanism' && currentLevelRef.current === 'expanded') {
+      } else if (nodeData.primary_type === 'Mechanism' && currentLevelRef.current === 'expanded-mechanism') {
         // Clicking center mechanism clears DM selection
         evt.target.cy().nodes('.active-dm').removeClass('active-dm')
       }
@@ -66,9 +66,9 @@ export function useGraphEvents(
     cy.on('dbltap', 'node', (evt) => {
       const nodeData = evt.target.data()
 
-      if (currentLevelRef.current === 'expanded' && nodeData.primary_type === 'Decision Maker') {
+      if (currentLevelRef.current === 'expanded-mechanism' && nodeData.primary_type === 'Decision Maker') {
         renderExpandedRef.current('dm', nodeData.id)
-      } else if (currentLevelRef.current === 'expanded' && nodeData.primary_type === 'Institution') {
+      } else if (currentLevelRef.current === 'expanded-mechanism' && nodeData.primary_type === 'Institution') {
         renderExpandedRef.current('institution', nodeData.id)
       } else if (currentLevelRef.current === 'expanded-dm' && nodeData.primary_type === 'Mechanism') {
         renderExpandedRef.current('mechanism', nodeData.id)
