@@ -4,7 +4,7 @@ import type { GraphData } from '../../../types/models'
 import { getBestInstitution } from '../utils'
 
 const DM_OFFSET = 130 // px from institution center to first DM along corridor direction
-const DM_SPREAD = 70 // perpendicular spacing between DMs — nudge pass separates overlaps
+export const DM_SPREAD = 70 // perpendicular spacing between DMs — nudge pass separates overlaps
 const EXTERNAL_WEIGHT = 0.3 // pull weight for external memberships (vs 1.0 for primary)
 
 const MECH_SPREAD = 70 // tangent spacing between single-institution mechanisms on the arc
@@ -113,35 +113,11 @@ export function seedDmPositions(
 }
 
 /**
- * Compute institution affinity for a mechanism: count how many of its
- * connected DMs have each institution as their "best" institution.
- * Returns a map of institution ID → DM count (the affinity weight).
- */
-function computeMechInstAffinity(
-  mechId: string,
-  data: GraphData,
-  instMemberCount: Map<string, number>,
-): Map<string, number> {
-  const affinity = new Map<string, number>()
-  for (const edge of data.edges) {
-    const dmId = edge.source === mechId ? edge.target : edge.target === mechId ? edge.source : null
-    if (!dmId) continue
-    const dmNode = data.nodes.find((n) => n.id === dmId)
-    if (dmNode?.primary_type !== 'Decision Maker') continue
-    const bestInstId = getBestInstitution(dmId, data.memberships, instMemberCount)
-    if (bestInstId) {
-      affinity.set(bestInstId, (affinity.get(bestInstId) ?? 0) + 1)
-    }
-  }
-  return affinity
-}
-
-/**
  * Seed mechanism positions from connected DM positions.
  *
- * Multi-institution mechanisms sit at the weighted average of their
- * connected DMs — unique DM connections produce natural spread,
- * and the nudge pass resolves any remaining overlaps.
+ * Multi-institution mechanisms sit at the average of their connected
+ * DM positions — the DMs are already biased toward their best
+ * institution, so the average naturally reflects institutional pull.
  *
  * Single-institution mechanisms are placed alongside their institution
  * on the circle arc, slightly inside the institution radius so
@@ -166,27 +142,23 @@ export function seedMechanismPositions(
       .filter((n) => n.id() !== node.id())
     if (connectedDMs.length === 0) return
 
-    const instAffinity = computeMechInstAffinity(node.id(), data, instMemberCount)
-    const instIds = [...instAffinity.keys()]
-
-    // Weighted average of connected DM positions (weighted by institution affinity)
+    // Find distinct institutions this mechanism connects to via its DMs
+    const instIds = new Set<string>()
     let ax = 0,
-      ay = 0,
-      totalW = 0
+      ay = 0
     connectedDMs.forEach((dm) => {
-      const dmBestInst = getBestInstitution(dm.id(), data.memberships, instMemberCount)
-      const w = (dmBestInst ? instAffinity.get(dmBestInst) : null) ?? 1
+      const bestInstId = getBestInstitution(dm.id(), data.memberships, instMemberCount)
+      if (bestInstId) instIds.add(bestInstId)
       const p = dm.position()
-      ax += p.x * w
-      ay += p.y * w
-      totalW += w
+      ax += p.x
+      ay += p.y
     })
-    ax /= totalW || 1
-    ay /= totalW || 1
+    ax /= connectedDMs.length
+    ay /= connectedDMs.length
 
-    if (instIds.length === 1) {
+    if (instIds.size === 1) {
       // Single-institution: collect for arc placement below
-      const instId = instIds[0]
+      const instId = [...instIds][0]
       if (!singleInstGroups.has(instId)) {
         singleInstGroups.set(instId, { nodes: [], dmSumX: 0, dmSumY: 0 })
       }
@@ -195,7 +167,7 @@ export function seedMechanismPositions(
       group.dmSumX += ax
       group.dmSumY += ay
     } else {
-      // Multi-institution: place at DM-weighted average directly
+      // Multi-institution: place at DM average directly
       node.position({ x: ax, y: ay })
     }
   })

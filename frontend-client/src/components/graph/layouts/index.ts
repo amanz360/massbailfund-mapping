@@ -1,3 +1,3 @@
-export { applyLandingLayout } from './landingFcose'
+export { applyLandingLayout } from './landingLayout'
 export { computeExpandedPositions } from './expandedLayout'
 export { ensureEdgeLabelsFit } from './edgeLabelSpacing'

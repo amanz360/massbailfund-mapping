@@ -2,7 +2,7 @@ import type { Core } from 'cytoscape'
 import type cytoscape from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import { applyDotIndicators, computeInstMemberCount, getBestInstitution } from '../utils'
-import { seedDmPositions, seedMechanismPositions } from './landingSeeding'
+import { DM_SPREAD, seedDmPositions, seedMechanismPositions } from './landingSeeding'
 
 /**
  * Apply dot indicators to DM nodes, color DM borders by primary institution
@@ -124,7 +124,6 @@ function nudgeOverlaps(cy: Core, minDist: number = 160, maxPasses: number = 10):
  */
 function computeRadius(numInstitutions: number, maxDmsPerInst: number): number {
   if (numInstitutions <= 1) return 0 // single institution sits at origin
-  const DM_SPREAD = 70 // must match landingSeeding.ts
   const clusterWidth = Math.max(maxDmsPerInst - 1, 0) * DM_SPREAD
   const padding = 150 // breathing room between adjacent clusters
   const minChord = clusterWidth + padding
