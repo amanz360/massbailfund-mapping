@@ -78,13 +78,6 @@ export function useGraphNavigation(
     const entity = graphData.nodes.find((n) => n.id === entityId)
     if (!entity) return
 
-    // Defer render if the container has zero dimensions (e.g. during route transitions)
-    const container = containerRef.current
-    if (!container || container.clientWidth === 0 || container.clientHeight === 0) {
-      requestAnimationFrame(() => renderExpandedRef.current(viewType, entityId))
-      return
-    }
-
     layoutRef.current?.stop()
     cy.elements().remove()
     cy.resize()
@@ -123,7 +116,6 @@ export function useGraphNavigation(
     setExpandedDmId(viewType === 'dm' ? entityId : null)
     setExpandedInstitutionId(viewType === 'institution' ? entityId : null)
 
-    localStorage.setItem('mbf-graph-hint-seen', '1')
     callbacks.onMechanismExpand?.(viewType === 'mechanism' ? entityId : null)
     callbacks.onDmExpand?.(viewType === 'dm' ? entityId : null)
     callbacks.onInstitutionExpand?.(viewType === 'institution' ? entityId : null)
