@@ -148,16 +148,16 @@ The graph visualization uses [Cytoscape.js](https://js.cytoscape.org/) and lives
 components/graph/
   SystemMap.tsx           # Orchestrator — wires hooks + UI components
   types.ts                # Shared types (ViewLevel, ExpandedViewType, SystemMapProps)
-  cytoscape-styles.ts     # Node/edge visual styles (colors, shapes, sizes)
+  cytoscape-styles.ts     # Node/edge visual styles (colors, shapes, sizes, view-specific classes)
 
   hooks/
     useGraphNavigation.ts # View state, Cytoscape lifecycle, render dispatch
     useGraphEvents.ts     # Click, double-click, hover, keyboard handlers
 
-  layouts/                # Position computation (no React, no Cytoscape dependency)
-    landingFcose.ts       # Landing view: fcose layout pipeline orchestrator
-    landingSeeding.ts     # Landing view: DM + mechanism corridor seeding
-    expandedLayout.ts     # Expanded views: tripartite layout (mechanism/DM/institution)
+  layouts/
+    landingLayout.ts      # Landing view: layout pipeline orchestrator + node decorations
+    landingSeeding.ts     # Landing view: DM corridor seeding + mechanism placement
+    expandedLayout.ts     # Expanded views: tripartite column layout with barycenter ordering
     edgeLabelSpacing.ts   # Post-layout edge label gap enforcement
 
   elements/               # Cytoscape element construction (pure functions)
@@ -179,11 +179,12 @@ components/graph/
 
 | Task | Where to look |
 |------|--------------|
-| Change how the landing layout arranges nodes | `layouts/landingFcose.ts` (pipeline) and `layouts/landingSeeding.ts` (position seeding) |
+| Change how the landing layout arranges nodes | `layouts/landingLayout.ts` (pipeline) and `layouts/landingSeeding.ts` (position seeding) |
+| Tune spacing between DMs or mechanisms | `layouts/landingSeeding.ts` — constants at top of file (`DM_OFFSET`, `DM_SPREAD`, `MECH_SPREAD`, etc.) |
 | Change what happens when you click a node | `hooks/useGraphEvents.ts` — tap handler |
 | Change hover highlighting behavior | `hooks/useGraphEvents.ts` — mouseover handler |
 | Modify the legend | `ui/GraphLegend.tsx` — self-contained, no graph knowledge needed |
-| Change node/edge colors or shapes | `cytoscape-styles.ts` |
+| Change node/edge colors or shapes | `cytoscape-styles.ts` (static) or `layouts/landingLayout.ts` `applyNodeDecorations` (data-driven) |
 | Change which nodes/edges appear in a view | `elements/landingElements.ts` or `elements/expandedElements.ts` |
 | Change how expanded views position nodes | `layouts/expandedLayout.ts` |
 | Adjust the detail panel | `DetailPanel.tsx` (separate from the graph system) |
@@ -194,13 +195,19 @@ components/graph/
 
 2. **Elements** are built from this data by pure functions in `elements/`. Each function returns a Cytoscape `ElementDefinition[]` array — the nodes and edges that should appear in the graph.
 
-3. **Layouts** compute where nodes should be positioned. The landing view uses the [fcose](https://github.com/iVis-at-Bilkent/cytoscape.js-fcose) physics-based layout with seeded initial positions. Expanded views use a tripartite layout (focus entity + two groups).
+3. **Layout** computes where nodes should be positioned. The landing view uses a deterministic preset layout — every position is computed directly from the data with no physics simulation. The pipeline in `landingLayout.ts` runs these steps:
+   1. Pin institutions at evenly-spaced circle positions (radius scales with data)
+   2. Seed DMs near their best institution, pulled toward secondary institutions
+   3. Place multi-institution mechanisms at the average of their connected DM positions
+   4. Place single-institution mechanisms alongside their institution on the circle arc
+   5. Nudge overlapping nodes apart (institutions stay pinned)
+   6. Animate from origin to final positions
 
-4. **Events** handle user interaction. Click navigates between views, double-click drills deeper, hover highlights related nodes.
+   Expanded views use a tripartite column layout with barycenter edge-crossing minimization.
+
+4. **Events** handle user interaction. Click navigates between views, double-click drills deeper, hover highlights related nodes and reveals hidden secondary membership edges.
 
 5. **UI overlays** (legend, breadcrumb, controls, help) are standard React components layered on top of the Cytoscape canvas.
-
-Graph data comes from the `/api/v1/graph/` endpoint via `graphSlice.ts`. Nodes have `primary_type` (Mechanism, Decision Maker, Institution) and `secondary_type` for styling.
 
 ### Theming and styling
 
