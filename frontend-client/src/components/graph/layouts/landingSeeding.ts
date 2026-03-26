@@ -8,6 +8,8 @@ export const DM_SPREAD = 70 // perpendicular spacing between DMs — nudge pass 
 const EXTERNAL_WEIGHT = 0.3 // pull weight for external memberships (vs 1.0 for primary)
 
 const MECH_SPREAD = 70 // tangent spacing between single-institution mechanisms on the arc
+const ARC_OFFSET_ANGLE = 0.45 // radians (~26°) from institution along the circle arc
+const ARC_RADIUS_FRACTION = 0.85 // fraction of institution radius — keeps mechanisms inside the boundary
 
 /**
  * Seed DM node positions deterministically from institutional memberships.
@@ -186,8 +188,8 @@ export function seedMechanismPositions(
     const avgDmY = group.dmSumY / group.nodes.length
     const dmAngle = Math.atan2(avgDmY, avgDmX)
     const side = Math.sin(dmAngle - instAngle) >= 0 ? 1 : -1
-    const offsetAngle = instAngle + side * 0.45 // ~26° arc offset
-    const arcRadius = instRadius * 0.85
+    const offsetAngle = instAngle + side * ARC_OFFSET_ANGLE
+    const arcRadius = instRadius * ARC_RADIUS_FRACTION
     const base = {
       x: Math.cos(offsetAngle) * arcRadius,
       y: Math.sin(offsetAngle) * arcRadius,
