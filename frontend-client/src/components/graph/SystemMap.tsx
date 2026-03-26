@@ -5,7 +5,7 @@ import type { AppDispatch } from '../../store/store'
 import { selectGraphData, selectGraphLoading } from '../../store/slices/graphSlice'
 import { buildInstitutionColorsFromGraph } from '../../utils/entities'
 import type { SystemMapProps } from './types'
-import { useCytoscapeInstance, useGraphNavigation, useGraphEvents } from './hooks'
+import { useGraphNavigation, useGraphEvents } from './hooks'
 import { HelpOverlay, HELP_STORAGE_KEY, GraphBreadcrumb, GraphLegend, GraphControls } from './ui'
 
 export default function SystemMap({
@@ -28,9 +28,6 @@ export default function SystemMap({
     [graphData],
   )
 
-  // Refs for cytoscape instance, container, and layout
-  const { cyRef, containerRef, layoutRef } = useCytoscapeInstance()
-
   // Navigation: creates cy, renders landing/expanded views, manages view state
   const callbacks = useMemo(
     () => ({
@@ -43,15 +40,14 @@ export default function SystemMap({
   )
 
   const {
+    cyRef,
+    containerRef,
     currentLevel,
     expandedEntityName,
     cyReady,
     renderLanding,
     renderExpanded,
   } = useGraphNavigation(
-    cyRef,
-    containerRef,
-    layoutRef,
     graphData,
     institutionColors,
     theme.palette.institution.main,

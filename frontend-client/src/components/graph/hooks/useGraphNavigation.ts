@@ -1,5 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import type { MutableRefObject, RefObject } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import cytoscape, { type Core, type Layouts } from 'cytoscape'
 import fcose from 'cytoscape-fcose'
 import type { AppDispatch } from '../../../store/store'
@@ -14,15 +13,12 @@ import { applyDotIndicators } from '../utils'
 cytoscape.use(fcose)
 
 /**
- * Central coordinator for graph view state and rendering.
- * Manages which view is active (landing, mechanism-expanded, etc.),
- * creates the Cytoscape instance, and exposes renderLanding/renderExpanded
+ * Central coordinator for graph view state, Cytoscape lifecycle, and rendering.
+ * Creates and owns the Cytoscape instance, manages which view is active
+ * (landing, mechanism-expanded, etc.), and exposes renderLanding/renderExpanded
  * functions that build elements and apply layouts from the extracted modules.
  */
 export function useGraphNavigation(
-  cyRef: MutableRefObject<Core | null>,
-  containerRef: RefObject<HTMLDivElement | null>,
-  layoutRef: MutableRefObject<Layouts | null>,
   graphData: GraphData | null,
   institutionColors: Map<string, string>,
   fallbackInstitutionColor: string,
@@ -35,6 +31,22 @@ export function useGraphNavigation(
   },
   initialFocusNodeId?: string | null,
 ) {
+  // Cytoscape instance refs + cleanup
+  const cyRef = useRef<Core | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const layoutRef = useRef<Layouts | null>(null)
+
+  useEffect(() => {
+    return () => {
+      layoutRef.current?.stop()
+      layoutRef.current = null
+      if (cyRef.current) {
+        cyRef.current.destroy()
+        cyRef.current = null
+      }
+    }
+  }, [])
+
   const [currentLevel, setCurrentLevel] = useState<ViewLevel>('landing')
   const [expandedEntityId, setExpandedEntityId] = useState<string | null>(null)
   const [cyReady, setCyReady] = useState(false)
@@ -144,6 +156,8 @@ export function useGraphNavigation(
   }, [graphData])
 
   return {
+    cyRef,
+    containerRef,
     currentLevel,
     expandedEntityName,
     cyReady,
