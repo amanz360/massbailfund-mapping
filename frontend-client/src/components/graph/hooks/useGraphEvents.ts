@@ -210,10 +210,9 @@ export function useGraphEvents(
           if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
         })
         cy.edges().forEach((e) => {
-          if (e.hasClass('hidden-membership-edge')) return
           const src = e.data('source')
           const tgt = e.data('target')
-          // Show both visible and hidden membership edges for this DM
+          // Reveal hidden membership edges for this DM so all primary institutions show
           if (e.hasClass('membership-edge') || e.hasClass('hidden-membership-edge')) {
             if ((src === dmId && instIds.has(tgt)) || (tgt === dmId && instIds.has(src))) {
               if (e.hasClass('hidden-membership-edge')) e.addClass('revealed')
