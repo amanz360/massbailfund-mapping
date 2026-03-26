@@ -1,5 +1,6 @@
 import type { GraphData } from '../../../types/models'
 import type { ExpandedViewType } from '../types'
+import { getConnectedByType } from '../utils/graphHelpers'
 
 type Position = { x: number; y: number }
 
@@ -117,17 +118,7 @@ function computeMechanism(
   const positions = new Map<string, Position>()
 
   // Collect connected DM IDs
-  const dmIdSet = new Set<string>()
-  for (const edge of data.edges) {
-    if (edge.source === mechanismId) {
-      const target = data.nodes.find((n) => n.id === edge.target)
-      if (target?.primary_type === 'Decision Maker') dmIdSet.add(edge.target)
-    }
-    if (edge.target === mechanismId) {
-      const source = data.nodes.find((n) => n.id === edge.source)
-      if (source?.primary_type === 'Decision Maker') dmIdSet.add(edge.source)
-    }
-  }
+  const { nodeIds: dmIdSet } = getConnectedByType(mechanismId, data, 'Decision Maker')
 
   // Collect primary institutions of those DMs
   const instIdSet = new Set<string>()
@@ -209,17 +200,7 @@ function computeDm(
   positions.set(dmId, { x: 0, y: 0 })
 
   // Collect connected mechanism IDs
-  const mechIdSet = new Set<string>()
-  for (const edge of data.edges) {
-    if (edge.source === dmId) {
-      const target = data.nodes.find((n) => n.id === edge.target)
-      if (target?.primary_type === 'Mechanism') mechIdSet.add(edge.target)
-    }
-    if (edge.target === dmId) {
-      const source = data.nodes.find((n) => n.id === edge.source)
-      if (source?.primary_type === 'Mechanism') mechIdSet.add(edge.source)
-    }
-  }
+  const { nodeIds: mechIdSet } = getConnectedByType(dmId, data, 'Mechanism')
   const mechIds = [...mechIdSet]
 
   // Collect primary institution IDs

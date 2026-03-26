@@ -1,6 +1,7 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import type { ExpandedViewType } from '../types'
+import { getConnectedByType } from '../utils/graphHelpers'
 
 /**
  * Build expanded-view elements for any of the three expanded views
@@ -40,24 +41,11 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
     classes: 'center-mechanism',
   })
 
-  const connectedDmIds = new Set<string>()
-  const relevantEdges: typeof data.edges = []
-  for (const edge of data.edges) {
-    if (edge.source === mechanismId) {
-      const target = data.nodes.find((n) => n.id === edge.target)
-      if (target?.primary_type === 'Decision Maker') {
-        connectedDmIds.add(edge.target)
-        relevantEdges.push(edge)
-      }
-    }
-    if (edge.target === mechanismId) {
-      const source = data.nodes.find((n) => n.id === edge.source)
-      if (source?.primary_type === 'Decision Maker') {
-        connectedDmIds.add(edge.source)
-        relevantEdges.push(edge)
-      }
-    }
-  }
+  const { nodeIds: connectedDmIds, edges: relevantEdges } = getConnectedByType(
+    mechanismId,
+    data,
+    'Decision Maker',
+  )
 
   for (const dmId of connectedDmIds) {
     const dm = data.nodes.find((n) => n.id === dmId)
@@ -137,24 +125,11 @@ function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
     classes: 'center-dm',
   })
 
-  const connectedMechIds = new Set<string>()
-  const relevantEdges: typeof data.edges = []
-  for (const edge of data.edges) {
-    if (edge.source === dmId) {
-      const target = data.nodes.find((n) => n.id === edge.target)
-      if (target?.primary_type === 'Mechanism') {
-        connectedMechIds.add(edge.target)
-        relevantEdges.push(edge)
-      }
-    }
-    if (edge.target === dmId) {
-      const source = data.nodes.find((n) => n.id === edge.source)
-      if (source?.primary_type === 'Mechanism') {
-        connectedMechIds.add(edge.source)
-        relevantEdges.push(edge)
-      }
-    }
-  }
+  const { nodeIds: connectedMechIds, edges: relevantEdges } = getConnectedByType(
+    dmId,
+    data,
+    'Mechanism',
+  )
 
   for (const mechId of connectedMechIds) {
     const mech = data.nodes.find((n) => n.id === mechId)

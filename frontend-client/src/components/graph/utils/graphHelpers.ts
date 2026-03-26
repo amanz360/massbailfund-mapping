@@ -1,4 +1,35 @@
-import type { GraphData } from '../../../types/models'
+import type { GraphData, GraphEdge } from '../../../types/models'
+
+/**
+ * Find all nodes of a given type connected to an entity via edges.
+ * Checks both edge directions (source and target).
+ * Returns the connected node IDs and the relevant edges.
+ */
+export function getConnectedByType(
+  entityId: string,
+  data: GraphData,
+  targetType: string,
+): { nodeIds: Set<string>; edges: GraphEdge[] } {
+  const nodeIds = new Set<string>()
+  const edges: GraphEdge[] = []
+  for (const edge of data.edges) {
+    if (edge.source === entityId) {
+      const target = data.nodes.find((n) => n.id === edge.target)
+      if (target?.primary_type === targetType) {
+        nodeIds.add(edge.target)
+        edges.push(edge)
+      }
+    }
+    if (edge.target === entityId) {
+      const source = data.nodes.find((n) => n.id === edge.source)
+      if (source?.primary_type === targetType) {
+        nodeIds.add(edge.source)
+        edges.push(edge)
+      }
+    }
+  }
+  return { nodeIds, edges }
+}
 
 /**
  * Count primary members per institution.
