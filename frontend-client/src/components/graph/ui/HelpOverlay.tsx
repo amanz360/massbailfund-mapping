@@ -1,4 +1,4 @@
-import { Box, Typography, Link } from '@mui/material'
+import { Box, Typography, Link, useTheme, alpha } from '@mui/material'
 
 export const HELP_STORAGE_KEY = 'mbf-graph-hint-seen'
 
@@ -8,6 +8,8 @@ interface HelpOverlayProps {
 }
 
 export const HelpOverlay = ({ visible, onDismiss }: HelpOverlayProps) => {
+  const theme = useTheme()
+
   if (!visible) return null
 
   const handleDismiss = () => {
@@ -24,7 +26,7 @@ export const HelpOverlay = ({ visible, onDismiss }: HelpOverlayProps) => {
         transform: 'translate(-50%, -50%)',
         zIndex: 5,
         textAlign: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: alpha(theme.palette.background.paper, 0.95),
         border: '1px solid',
         borderColor: 'divider',
         px: 3.5,

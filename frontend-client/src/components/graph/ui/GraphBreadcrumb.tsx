@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Box, Typography, Link, Tooltip, IconButton } from '@mui/material'
+import { Box, Typography, Link, Tooltip, IconButton, useTheme, alpha } from '@mui/material'
 import LinkIcon from '@mui/icons-material/Link'
 
 interface GraphBreadcrumbProps {
@@ -8,6 +8,7 @@ interface GraphBreadcrumbProps {
 }
 
 export const GraphBreadcrumb = ({ entityName, onReset }: GraphBreadcrumbProps) => {
+  const theme = useTheme()
   const [linkCopied, setLinkCopied] = useState(false)
 
   return (
@@ -16,7 +17,7 @@ export const GraphBreadcrumb = ({ entityName, onReset }: GraphBreadcrumbProps) =
         position: 'absolute',
         top: 16,
         left: 16,
-        backgroundColor: 'rgba(255,255,255,0.92)',
+        backgroundColor: alpha(theme.palette.background.paper, 0.92),
         borderRadius: 1,
         border: '1px solid',
         borderColor: 'divider',
