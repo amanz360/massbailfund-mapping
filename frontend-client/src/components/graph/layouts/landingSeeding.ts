@@ -26,7 +26,7 @@ const MECH_SPREAD = 40 // perpendicular spacing between mechanisms in the same c
 export function seedDmPositions(
   cy: Core,
   data: GraphData,
-  institutionColors: Map<string, string>,
+  _institutionColors: Map<string, string>,
   instPositions: Map<string, { x: number; y: number }>,
   instMemberCount: Map<string, number>,
 ): void {

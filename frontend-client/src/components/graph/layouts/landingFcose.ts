@@ -61,7 +61,7 @@ export function applyDmDecorations(
  */
 export function pinInstitutions(
   cy: Core,
-  institutionColors: Map<string, string>,
+  _institutionColors: Map<string, string>,
   radius: number,
 ): {
   fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[]
@@ -91,7 +91,7 @@ export function pinInstitutions(
  * Also finds tri-institution mechanism IDs for per-node repulsion.
  */
 export function buildPlacementConstraints(
-  cy: Core,
+  _cy: Core,
   mechCorridors: MechCorridors,
 ): {
   constraints: { left: string; right: string; gap?: number }[]
@@ -137,8 +137,8 @@ export function buildPlacementConstraints(
  * callbacks, gravity settings, iteration count, and constraints.
  */
 export function buildFcoseOptions(
-  cy: Core,
-  data: GraphData,
+  _cy: Core,
+  _data: GraphData,
   fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[],
   relativePlacementConstraint: { left: string; right: string; gap?: number }[],
   instMemberCount: Map<string, number>,
