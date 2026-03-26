@@ -11,8 +11,6 @@ export function buildExpandedElements(
   viewType: ExpandedViewType,
   focusEntityId: string,
   data: GraphData,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _institutionColors: Map<string, string>,
 ): ElementDefinition[] {
   switch (viewType) {
     case 'mechanism':

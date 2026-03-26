@@ -104,7 +104,7 @@ function verticalStack(
 // ---------------------------------------------------------------------------
 
 /**
- * Expanded mechanism view (lines 372-482 in original SystemMap.tsx).
+ * Expanded mechanism view.
  *
  * Layout: institutions left — DMs centre — mechanism right.
  * Uses barycenter heuristic for DM ↔ institution ordering.
@@ -167,7 +167,7 @@ function computeMechanism(
 
   const DM_COUNT = dmOrder.length
 
-  // Mechanism on the right
+  // Mechanism on the right — offset from DM column at x=0
   positions.set(mechanismId, { x: 250, y: 0 })
 
   // DMs in vertical stack at centre
@@ -179,7 +179,7 @@ function computeMechanism(
 
   // Institutions on the left, spanning the same vertical range as DMs
   if (instOrder.length > 0) {
-    const INST_X = -200
+    const INST_X = -200 // left column x-position, symmetric with mechanism at x=250
     const INST_COUNT = instOrder.length
     const instTotalHeight = INST_COUNT === 1 ? 0 : dmTotalHeight
     const instSpacing = INST_COUNT === 1 ? 0 : instTotalHeight / (INST_COUNT - 1)
@@ -193,7 +193,7 @@ function computeMechanism(
 }
 
 /**
- * Expanded DM view (lines 488-553 in original SystemMap.tsx).
+ * Expanded DM view.
  *
  * Layout: institutions left — DM centre — mechanisms right (parabolic arc).
  * No barycenter — uses simple iteration order.
@@ -231,9 +231,9 @@ function computeDm(
   const INST_COUNT = instIds.length
 
   // Mechanisms: parabolic arc on the right
-  const VERT_SPACING = 95
-  const BASE_DIST = 200
-  const CURVE = Math.min(100, MECH_COUNT * 14)
+  const VERT_SPACING = 95 // vertical gap between mechanism nodes
+  const BASE_DIST = 200 // minimum horizontal distance from center DM to mechanism arc
+  const CURVE = Math.min(100, MECH_COUNT * 14) // parabolic bulge — grows with mechanism count, capped at 100px
 
   for (const { id, x, y } of parabolicArc(mechIds, VERT_SPACING, BASE_DIST, CURVE)) {
     positions.set(id, { x, y })
@@ -241,7 +241,7 @@ function computeDm(
 
   // Institutions: left side with fixed 120px spacing
   if (INST_COUNT > 0) {
-    const INST_RADIUS = 200
+    const INST_RADIUS = 200 // horizontal distance from center DM to institution column
     if (INST_COUNT === 1) {
       positions.set(instIds[0], { x: -INST_RADIUS, y: 0 })
     } else {
@@ -260,7 +260,7 @@ function computeDm(
 }
 
 /**
- * Expanded institution view (lines 256-366 in original SystemMap.tsx).
+ * Expanded institution view.
  *
  * Layout: institution left — DMs centre — mechanisms right (parabolic arc).
  * Uses barycenter heuristic for DM ↔ mechanism ordering.
@@ -329,7 +329,7 @@ function computeInstitution(
   const DM_COUNT = dmOrder.length
   const MECH_COUNT = mechOrder.length
 
-  // Institution on the left
+  // Institution on the left — mirrors mechanism-expanded layout's INST_X
   positions.set(institutionId, { x: -200, y: 0 })
 
   // DMs in vertical stack at centre

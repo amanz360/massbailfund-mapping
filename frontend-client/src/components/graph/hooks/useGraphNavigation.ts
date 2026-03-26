@@ -16,6 +16,12 @@ import { applyDotIndicators } from '../utils/dotIndicators'
 
 cytoscape.use(fcose)
 
+/**
+ * Central coordinator for graph view state and rendering.
+ * Manages which view is active (landing, mechanism-expanded, etc.),
+ * creates the Cytoscape instance, and exposes renderLanding/renderExpanded
+ * functions that build elements and apply layouts from the extracted modules.
+ */
 export function useGraphNavigation(
   cyRef: MutableRefObject<Core | null>,
   containerRef: RefObject<HTMLDivElement | null>,
@@ -55,7 +61,7 @@ export function useGraphNavigation(
     cy.elements().remove()
     cy.resize()
 
-    const elements = buildLandingElements(graphData, institutionColors)
+    const elements = buildLandingElements(graphData)
     cy.add(elements)
 
     const layout = applyLandingLayout(cy, graphData, institutionColors, fallbackInstitutionColor)
@@ -82,7 +88,7 @@ export function useGraphNavigation(
     cy.elements().remove()
     cy.resize()
 
-    const elements = buildExpandedElements(viewType, entityId, graphData, institutionColors)
+    const elements = buildExpandedElements(viewType, entityId, graphData)
     cy.add(elements)
 
     // Apply decorations
@@ -123,7 +129,13 @@ export function useGraphNavigation(
     dispatch(selectEntity(entityId))
   }, [cyRef, layoutRef, graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
 
-  // Ref sync effects — keep refs in sync so event handlers see latest values
+  // ---------------------------------------------------------------------------
+  // Ref synchronization
+  //
+  // Event handlers registered in useGraphEvents run inside Cytoscape callbacks
+  // that capture refs at registration time. To avoid stale closures, we sync
+  // the latest values into stable refs that the event handlers read through.
+  // ---------------------------------------------------------------------------
   const currentLevelRef = useRef(currentLevel)
   useEffect(() => { currentLevelRef.current = currentLevel }, [currentLevel])
 
@@ -164,6 +176,7 @@ export function useGraphNavigation(
     } else {
       renderLanding()
     }
+  // One-time init when graphData first arrives; renderLanding/renderExpanded are stable callbacks
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphData])
 

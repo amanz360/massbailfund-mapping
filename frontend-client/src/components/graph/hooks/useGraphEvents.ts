@@ -7,6 +7,11 @@ import type { GraphData } from '../../../types/models'
 import type { ViewLevel, ExpandedViewType } from '../types'
 import { selectEntity } from '../../../store/slices/detailSlice'
 
+/**
+ * Registers all Cytoscape event handlers — tap, double-tap, hover, and
+ * keyboard shortcuts. Depends on refs from useGraphNavigation to access
+ * current state without stale closures.
+ */
 export function useGraphEvents(
   cyRef: MutableRefObject<Core | null>,
   cyReady: boolean,
@@ -30,57 +35,31 @@ export function useGraphEvents(
     cy.on('tap', 'node', (evt) => {
       const nodeData = evt.target.data()
 
+      // Landing view: navigate to expanded view for the clicked entity
       if (currentLevelRef.current === 'landing') {
-        if (nodeData.primary_type === 'Mechanism') {
-          renderExpandedRef.current('mechanism', nodeData.id)
-        } else if (nodeData.primary_type === 'Decision Maker') {
-          renderExpandedRef.current('dm', nodeData.id)
-        } else if (nodeData.primary_type === 'Institution') {
-          renderExpandedRef.current('institution', nodeData.id)
+        const typeMap: Record<string, ExpandedViewType> = {
+          'Mechanism': 'mechanism',
+          'Decision Maker': 'dm',
+          'Institution': 'institution',
         }
-      } else if (currentLevelRef.current === 'expanded') {
-        if (nodeData.primary_type === 'Decision Maker') {
-          // handleDmClick: highlight the clicked DM
-          evt.target.cy().nodes('.active-dm').removeClass('active-dm')
-          evt.target.addClass('active-dm')
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        } else if (nodeData.primary_type === 'Mechanism') {
-          // Click the center mechanism to open its detail panel
-          evt.target.cy().nodes('.active-dm').removeClass('active-dm')
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        } else if (nodeData.primary_type === 'Institution') {
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        }
-      } else if (currentLevelRef.current === 'expanded-dm') {
-        if (nodeData.primary_type === 'Mechanism') {
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        } else if (nodeData.primary_type === 'Decision Maker') {
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        } else if (nodeData.primary_type === 'Institution') {
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        }
-      } else if (currentLevelRef.current === 'expanded-institution') {
-        if (nodeData.primary_type === 'Decision Maker') {
-          // Click a DM to show its detail
-          evt.target.cy().nodes('.active-dm').removeClass('active-dm')
-          evt.target.addClass('active-dm')
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        } else if (nodeData.primary_type === 'Mechanism') {
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        } else if (nodeData.primary_type === 'Institution') {
-          // Re-click center institution to re-open its detail
-          onNodeSelectRef.current?.(nodeData.id)
-          dispatch(selectEntity(nodeData.id))
-        }
+        const viewType = typeMap[nodeData.primary_type]
+        if (viewType) renderExpandedRef.current(viewType, nodeData.id)
+        return
       }
+
+      // Expanded views: select entity for detail panel
+      // DM clicks toggle active-dm class (in mechanism and institution views)
+      if (nodeData.primary_type === 'Decision Maker' &&
+          (currentLevelRef.current === 'expanded' || currentLevelRef.current === 'expanded-institution')) {
+        evt.target.cy().nodes('.active-dm').removeClass('active-dm')
+        evt.target.addClass('active-dm')
+      } else if (nodeData.primary_type === 'Mechanism' && currentLevelRef.current === 'expanded') {
+        // Clicking center mechanism clears DM selection
+        evt.target.cy().nodes('.active-dm').removeClass('active-dm')
+      }
+
+      onNodeSelectRef.current?.(nodeData.id)
+      dispatch(selectEntity(nodeData.id))
     })
 
     // --- Double-tap handler (navigate between expanded views) ---
@@ -259,6 +238,7 @@ export function useGraphEvents(
     return () => {
       cy.removeAllListeners()
     }
+  // Registers once when cy is ready; all mutable state is accessed via refs
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cyReady])
 

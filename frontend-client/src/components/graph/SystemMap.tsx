@@ -96,6 +96,7 @@ export default function SystemMap({
     } else if (node.primary_type === 'Institution') {
       renderExpanded('institution', focusNodeId)
     }
+    // Runs only on focusNodeId/focusCounter change; renderExpanded is accessed via ref
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNodeId, focusCounter, graphData])
 
@@ -103,6 +104,7 @@ export default function SystemMap({
   useEffect(() => {
     if (!resetCounter || !cyRef.current) return
     renderLanding()
+    // Runs only on resetCounter change; renderLanding is accessed via ref
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetCounter])
 

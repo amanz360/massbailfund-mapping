@@ -11,11 +11,11 @@ export type MechCorridors = Map<
   }
 >
 
-const DM_OFFSET = 80
+const DM_OFFSET = 80 // px from institution center to first DM along corridor direction
 const DM_SPREAD = 30 // perpendicular spacing between DMs in the same corridor
-const EXTERNAL_WEIGHT = 0.3
+const EXTERNAL_WEIGHT = 0.3 // pull weight for external memberships (vs 1.0 for primary)
 
-const CORRIDOR_PUSH = 120 // pixels to push mechanisms away from missing institutions
+const CORRIDOR_PUSH = 120 // px to push mechanisms away from institutions they don't connect to
 const MECH_SPREAD = 40 // perpendicular spacing between mechanisms in the same corridor
 
 /**
@@ -26,7 +26,6 @@ const MECH_SPREAD = 40 // perpendicular spacing between mechanisms in the same c
 export function seedDmPositions(
   cy: Core,
   data: GraphData,
-  _institutionColors: Map<string, string>,
   instPositions: Map<string, { x: number; y: number }>,
   instMemberCount: Map<string, number>,
 ): void {

@@ -61,7 +61,6 @@ export function applyDmDecorations(
  */
 export function pinInstitutions(
   cy: Core,
-  _institutionColors: Map<string, string>,
   radius: number,
 ): {
   fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[]
@@ -91,7 +90,6 @@ export function pinInstitutions(
  * Also finds tri-institution mechanism IDs for per-node repulsion.
  */
 export function buildPlacementConstraints(
-  _cy: Core,
   mechCorridors: MechCorridors,
 ): {
   constraints: { left: string; right: string; gap?: number }[]
@@ -137,8 +135,6 @@ export function buildPlacementConstraints(
  * callbacks, gravity settings, iteration count, and constraints.
  */
 export function buildFcoseOptions(
-  _cy: Core,
-  _data: GraphData,
   fixedNodeConstraint: { nodeId: string; position: { x: number; y: number } }[],
   relativePlacementConstraint: { left: string; right: string; gap?: number }[],
   instMemberCount: Map<string, number>,
@@ -152,6 +148,8 @@ export function buildFcoseOptions(
     animate: true,
     animationDuration: 800,
     quality: 'proof',
+    // Tri-institution mechs get stronger repulsion (60000) to avoid overlap at graph center;
+    // other nodes use moderate repulsion (25000) to stay compact
     nodeRepulsion: (node: cytoscape.NodeSingular) =>
       triInstMechIds.has(node.id()) ? 60000 : 25000,
     // Short membership edges pull DMs close to institutions;
@@ -189,10 +187,10 @@ export function buildFcoseOptions(
       if (mechN && mechN.data('_numInst') === 2) return 0.3
       return 0.5 // mechanism edge pull
     },
-    gravity: 0.15,
+    gravity: 0.15, // weak center pull — institutions are pinned so this mainly affects loose nodes
     gravityRange: 3.8,
     initialEnergyOnIncremental: 0.08,
-    numIter: 5000,
+    numIter: 5000, // high iteration count for stable convergence with seeded positions
     nodeDimensionsIncludeLabels: true,
     padding: 50,
     fixedNodeConstraint,
@@ -225,21 +223,20 @@ export function applyLandingLayout(
   applyDmDecorations(cy, data, institutionColors, instMemberCount, fallbackInstitutionColor)
 
   // 3. Pin institutions at evenly-spaced circle positions
-  const { fixedNodeConstraint, instPositions } = pinInstitutions(cy, institutionColors, 420)
+  // Radius for the institution circle — determines overall graph size
+  const { fixedNodeConstraint, instPositions } = pinInstitutions(cy, 420)
 
   // 4. Seed DM positions along corridors
-  seedDmPositions(cy, data, institutionColors, instPositions, instMemberCount)
+  seedDmPositions(cy, data, instPositions, instMemberCount)
 
   // 5. Seed mechanism positions along corridors
   const mechCorridors = seedMechanismPositions(cy, data, instPositions, instMemberCount)
 
   // 6. Build placement constraints from corridor data
-  const { constraints, triInstMechIds } = buildPlacementConstraints(cy, mechCorridors)
+  const { constraints, triInstMechIds } = buildPlacementConstraints(mechCorridors)
 
   // 7. Build fcose layout options
   const options = buildFcoseOptions(
-    cy,
-    data,
     fixedNodeConstraint,
     constraints,
     instMemberCount,

@@ -8,8 +8,6 @@ import type { GraphData } from '../../../types/models'
  */
 export function buildLandingElements(
   data: GraphData,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _institutionColors: Map<string, string>,
 ): ElementDefinition[] {
   const elements: ElementDefinition[] = []
 
