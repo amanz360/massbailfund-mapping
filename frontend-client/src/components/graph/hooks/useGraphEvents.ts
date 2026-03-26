@@ -271,5 +271,5 @@ export function useGraphEvents(
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [currentLevelRef, renderLandingRef])
 }

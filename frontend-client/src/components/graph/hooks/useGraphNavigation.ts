@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { MutableRefObject, RefObject } from 'react'
-import cytoscape, { type Core } from 'cytoscape'
+import cytoscape, { type Core, type Layouts } from 'cytoscape'
 import fcose from 'cytoscape-fcose'
 import type { AppDispatch } from '../../../store/store'
 import type { GraphData } from '../../../types/models'
@@ -19,7 +19,7 @@ cytoscape.use(fcose)
 export function useGraphNavigation(
   cyRef: MutableRefObject<Core | null>,
   containerRef: RefObject<HTMLDivElement | null>,
-  layoutRef: MutableRefObject<any>,
+  layoutRef: MutableRefObject<Layouts | null>,
   graphData: GraphData | null,
   institutionColors: Map<string, string>,
   fallbackInstitutionColor: string,
@@ -70,7 +70,7 @@ export function useGraphNavigation(
     callbacks.onInstitutionExpand?.(null)
     callbacks.onNodeSelect?.(null)
     dispatch(clearDetail())
-  }, [graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
+  }, [cyRef, layoutRef, graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
 
   const renderExpanded = useCallback((viewType: ExpandedViewType, entityId: string) => {
     if (!cyRef.current || !graphData) return
@@ -97,10 +97,10 @@ export function useGraphNavigation(
     const positions = computeExpandedPositions(viewType, entityId, graphData)
     const layout = cy.layout({
       name: 'preset',
-      positions: (node: any) => positions.get(node.id()) || { x: 0, y: 0 },
+      positions: (node: cytoscape.NodeSingular) => positions.get(node.id()) || { x: 0, y: 0 },
       animate: true,
       animationDuration: 400,
-    } as any)
+    } as cytoscape.LayoutOptions)
     layoutRef.current = layout
     layout.run()
     layout.one('layoutstop', () => {
@@ -121,7 +121,7 @@ export function useGraphNavigation(
     callbacks.onInstitutionExpand?.(viewType === 'institution' ? entityId : null)
     callbacks.onNodeSelect?.(entityId)
     dispatch(selectEntity(entityId))
-  }, [graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
+  }, [cyRef, layoutRef, graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
 
   // Ref sync effects — keep refs in sync so event handlers see latest values
   const currentLevelRef = useRef(currentLevel)

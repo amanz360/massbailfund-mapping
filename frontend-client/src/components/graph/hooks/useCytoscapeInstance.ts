@@ -1,10 +1,10 @@
 import { useRef, useEffect } from 'react'
-import type { Core } from 'cytoscape'
+import type { Core, Layouts } from 'cytoscape'
 
 export function useCytoscapeInstance() {
   const cyRef = useRef<Core | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const layoutRef = useRef<any>(null)
+  const layoutRef = useRef<Layouts | null>(null)
 
   useEffect(() => {
     return () => {
