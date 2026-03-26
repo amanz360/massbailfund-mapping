@@ -21,7 +21,6 @@ export function applyDmDecorations(
     applyDotIndicators(node, data, institutionColors)
 
     // Color DM border by primary institution with fewest members
-    // (same heuristic as edge elasticity — smaller institution = stronger affinity)
     const bestInst = getBestInstitution(node.id(), data.memberships, instMemberCount)
     if (bestInst) {
       const color = institutionColors.get(bestInst)
@@ -49,7 +48,6 @@ export function applyDmDecorations(
 
 /**
  * Pin institution nodes at evenly-spaced circle positions.
- * Returns the fixed-node constraints and derived instPositions map.
  */
 export function pinInstitutions(
   cy: Core,
