@@ -1,5 +1,7 @@
 import { Box, Typography, Link } from '@mui/material'
 
+export const HELP_STORAGE_KEY = 'mbf-graph-hint-seen'
+
 interface HelpOverlayProps {
   visible: boolean
   onDismiss: () => void
@@ -9,7 +11,7 @@ export const HelpOverlay = ({ visible, onDismiss }: HelpOverlayProps) => {
   if (!visible) return null
 
   const handleDismiss = () => {
-    localStorage.setItem('mbf-graph-hint-seen', '1')
+    localStorage.setItem(HELP_STORAGE_KEY, '1')
     onDismiss()
   }
 

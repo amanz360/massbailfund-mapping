@@ -8,7 +8,7 @@ import type { SystemMapProps } from './types'
 import { useCytoscapeInstance } from './hooks/useCytoscapeInstance'
 import { useGraphNavigation } from './hooks/useGraphNavigation'
 import { useGraphEvents } from './hooks/useGraphEvents'
-import { HelpOverlay } from './ui/HelpOverlay'
+import { HelpOverlay, HELP_STORAGE_KEY } from './ui/HelpOverlay'
 import { GraphBreadcrumb } from './ui/GraphBreadcrumb'
 import { GraphLegend } from './ui/GraphLegend'
 import { GraphControls } from './ui/GraphControls'
@@ -109,7 +109,7 @@ export default function SystemMap({
   }, [resetCounter])
 
   // Help overlay dismissed state (persisted to localStorage)
-  const [hintDismissed, setHintDismissed] = useState(() => !!localStorage.getItem('mbf-graph-hint-seen'))
+  const [hintDismissed, setHintDismissed] = useState(() => !!localStorage.getItem(HELP_STORAGE_KEY))
 
   const handleDismissHint = useCallback(() => setHintDismissed(true), [])
   const handleShowHelp = useCallback(() => setHintDismissed(false), [])
