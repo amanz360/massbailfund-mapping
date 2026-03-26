@@ -1,5 +1,6 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
+import { computeInstMemberCount, getBestInstitution } from '../utils/graphHelpers'
 
 /**
  * Build Level 1 (landing) elements: all mechanisms, decision makers,
@@ -74,17 +75,12 @@ export function buildLandingElements(
   // For each DM, add only the single membership edge to the institution
   // with the fewest primary members (same heuristic as border color).
   // This creates decisive clustering — each DM is pulled into one neighborhood.
-  const instCounts = new Map<string, number>()
-  for (const m of data.memberships) {
-    if (m.membership_type === 'Primary') {
-      instCounts.set(m.institution, (instCounts.get(m.institution) ?? 0) + 1)
-    }
-  }
-  const dmBestInst = new Map<string, { membership: typeof data.memberships[0] }>()
+  const instCounts = computeInstMemberCount(data.memberships)
+  const dmBestInst = new Map<string, { membership: (typeof data.memberships)[0] }>()
   for (const m of data.memberships) {
     if (m.membership_type !== 'Primary') continue
-    const existing = dmBestInst.get(m.member)
-    if (!existing || (instCounts.get(m.institution) ?? Infinity) < (instCounts.get(existing.membership.institution) ?? Infinity)) {
+    const bestInstId = getBestInstitution(m.member, data.memberships, instCounts)
+    if (bestInstId === m.institution) {
       dmBestInst.set(m.member, { membership: m })
     }
   }
@@ -128,10 +124,9 @@ export function buildLandingElements(
       if (!dmId) continue
       const dmNode = data.nodes.find((n) => n.id === dmId)
       if (dmNode?.primary_type !== 'Decision Maker') continue
-      const bestInst = dmBestInst.get(dmId)
-      if (bestInst) {
-        const instId = bestInst.membership.institution
-        instAffinity.set(instId, (instAffinity.get(instId) ?? 0) + 1)
+      const bestInstId = getBestInstitution(dmId, data.memberships, instCounts)
+      if (bestInstId) {
+        instAffinity.set(bestInstId, (instAffinity.get(bestInstId) ?? 0) + 1)
       }
     }
     // Add an invisible edge to each institution with affinity > 0

@@ -1,6 +1,7 @@
 import type { Core } from 'cytoscape'
 import type cytoscape from 'cytoscape'
 import type { GraphData } from '../../../types/models'
+import { getBestInstitution } from '../utils/graphHelpers'
 
 export type MechCorridors = Map<
   string,
@@ -39,16 +40,14 @@ export function seedDmPositions(
     }
   >()
   cy.nodes('[primary_type="Decision Maker"]').forEach((node) => {
+    const bestInstId = getBestInstitution(node.id(), data.memberships, instMemberCount)
+    if (!bestInstId) return
+    const bestPos = instPositions.get(bestInstId)
+
     const primaryInsts =
       data?.memberships
         .filter((m) => m.member === node.id() && m.membership_type === 'Primary')
         .map((m) => m.institution) ?? []
-    if (primaryInsts.length === 0) return
-
-    const bestInstId = primaryInsts.reduce((best, id) =>
-      (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity) ? id : best,
-    )
-    const bestPos = instPositions.get(bestInstId)
     if (!bestPos) return
 
     const secondaryIds = primaryInsts.filter((id) => id !== bestInstId).sort()
@@ -219,18 +218,7 @@ export function seedMechanismPositions(
         totalW = 0
       connectedDMs.forEach((dm) => {
         // Find this DM's best institution
-        const dmPrimaryInsts =
-          data?.memberships
-            .filter((m) => m.member === dm.id() && m.membership_type === 'Primary')
-            .map((m) => m.institution) ?? []
-        const dmBestInst =
-          dmPrimaryInsts.length > 0
-            ? dmPrimaryInsts.reduce((best, id) =>
-                (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity)
-                  ? id
-                  : best,
-              )
-            : null
+        const dmBestInst = getBestInstitution(dm.id(), data.memberships, instMemberCount)
         const w = (dmBestInst ? instWeights.get(dmBestInst) : null) ?? 1
         const p = dm.position()
         ax += p.x * w

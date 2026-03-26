@@ -2,6 +2,7 @@ import type { Core } from 'cytoscape'
 import type cytoscape from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import { applyDotIndicators } from '../utils/dotIndicators'
+import { computeInstMemberCount, getBestInstitution } from '../utils/graphHelpers'
 import { seedDmPositions, seedMechanismPositions } from './landingSeeding'
 import type { MechCorridors } from './landingSeeding'
 
@@ -23,15 +24,8 @@ export function applyDmDecorations(
 
     // Color DM border by primary institution with fewest members
     // (same heuristic as edge elasticity — smaller institution = stronger affinity)
-    const primaryInsts = data.memberships
-      .filter((m) => m.member === node.id() && m.membership_type === 'Primary')
-      .map((m) => m.institution)
-    if (primaryInsts.length > 0) {
-      const bestInst = primaryInsts.reduce((best, id) =>
-        (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity)
-          ? id
-          : best,
-      )
+    const bestInst = getBestInstitution(node.id(), data.memberships, instMemberCount)
+    if (bestInst) {
       const color = institutionColors.get(bestInst)
       if (color) {
         node.style({
@@ -212,12 +206,7 @@ export function applyLandingLayout(
   fallbackInstitutionColor: string,
 ): cytoscape.Layouts {
   // 1. Compute primary member counts per institution (used for DM border + edge elasticity)
-  const instMemberCount = new Map<string, number>()
-  for (const m of data.memberships) {
-    if (m.membership_type === 'Primary') {
-      instMemberCount.set(m.institution, (instMemberCount.get(m.institution) ?? 0) + 1)
-    }
-  }
+  const instMemberCount = computeInstMemberCount(data.memberships)
 
   // 2. Apply DM decorations (dot indicators, border colors, institution styling)
   applyDmDecorations(cy, data, institutionColors, instMemberCount, fallbackInstitutionColor)
