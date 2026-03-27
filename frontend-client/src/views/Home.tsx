@@ -33,9 +33,15 @@ export default function Home() {
   const skipNextUrlSync = useRef(false)
   const isInitialMount = useRef(true)
 
-  // Clear navigation state after reading it (prevent re-reading on back/forward)
+  // Handle focusNodeId from navigation state (Browse "View on Map", search bar).
+  // On initial mount the useState initializers already captured locationFocusId,
+  // so the setters below are no-ops. On subsequent navigations while Home is
+  // already mounted, they update state to trigger the focus effect in SystemMap.
   useEffect(() => {
     if (locationFocusId) {
+      setFocusNodeId(locationFocusId)
+      setFocusCounter((c) => c + 1)
+      setSelectedNodeId(locationFocusId)
       navigate('/map', { replace: true, state: {} })
     }
   }, [locationFocusId, navigate])
