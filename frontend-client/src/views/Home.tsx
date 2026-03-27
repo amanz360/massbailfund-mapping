@@ -9,34 +9,36 @@ import { selectSelectedEntityId } from '../store/slices/detailSlice'
 import { selectEntityById } from '../store/slices/browseSlice'
 
 export default function Home() {
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
-  const [focusCounter, setFocusCounter] = useState(0)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Read focusNodeId from navigation state synchronously so it's available
+  // on the first render — prevents a race where useGraphNavigation's init
+  // renders landing before the focus effect can render the expanded view.
+  const locationFocusId = (location.state as { focusNodeId?: string } | null)?.focusNodeId ?? null
+
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(locationFocusId)
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(locationFocusId)
+  const [focusCounter, setFocusCounter] = useState(locationFocusId ? 1 : 0)
   const [expandedMechanismId, setExpandedMechanismId] = useState<string | null>(null)
   const [expandedDmId, setExpandedDmId] = useState<string | null>(null)
   const [expandedInstitutionId, setExpandedInstitutionId] = useState<string | null>(null)
   const [resetCounter, setResetCounter] = useState(0)
   const selectedId = useSelector(selectSelectedEntityId)
   const entity = useSelector((state: RootState) => selectEntityById(state, selectedId))
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
 
   // Flags to prevent circular URL <-> state updates
   const isProgrammaticNav = useRef(false)
   const skipNextUrlSync = useRef(false)
   const isInitialMount = useRef(true)
 
-  // Handle focusNodeId passed from Browse view via navigation state
+  // Clear navigation state after reading it (prevent re-reading on back/forward)
   useEffect(() => {
-    const state = location.state as { focusNodeId?: string } | null
-    if (state?.focusNodeId) {
-      setFocusNodeId(state.focusNodeId)
-      setFocusCounter((c) => c + 1)
-      setSelectedNodeId(state.focusNodeId)
+    if (locationFocusId) {
       navigate('/map', { replace: true, state: {} })
     }
-  }, [location.state, navigate])
+  }, [locationFocusId, navigate])
 
   // URL -> State: respond to back/forward navigation and initial load
   useEffect(() => {
