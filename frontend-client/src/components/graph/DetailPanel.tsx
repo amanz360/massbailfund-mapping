@@ -11,6 +11,9 @@ import { generateDmAutoDescription, sortTimelineEntries, groupReferencesByCatego
 import ReferenceSection from './ReferenceSection'
 import QuoteSection from './QuoteSection'
 import TimelineSection from './TimelineSection'
+import MechanismRelationships from './MechanismRelationships'
+import DecisionMakerRelationships from './DecisionMakerRelationships'
+import InstitutionRelationships from './InstitutionRelationships'
 
 interface DetailPanelProps {
   onClose?: () => void
@@ -128,252 +131,19 @@ export default function DetailPanel({ onClose, onNavigate, expandedMechanismId }
       ))}
 
       {/* Relationships — context-aware */}
-      {(() => {
-        const isExpandedMech = !!expandedMechanismId
-
-        if (isMechanismDetail(entity)) {
-          // Mechanism: show roles (connected decision makers)
-          if (entity.roles.length === 0) return null
-          return (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                Connected Decision Makers
-              </Typography>
-              {entity.roles.map((role) => (
-                <Box
-                  key={role.id}
-                  sx={{
-                    mb: 1.5,
-                    pl: 2,
-                    borderLeft: '3px solid',
-                    borderColor: alpha(theme.palette.secondary.main, 0.2),
-                  }}
-                >
-                  <Link
-                    component="button"
-                    variant="subtitle2"
-                    onClick={() => onNavigate?.(role.decision_maker.id)}
-                    sx={{ color: 'secondary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, textAlign: 'left' }}
-                  >
-                    {role.decision_maker.name}
-                  </Link>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {role.role_type}
-                    {role.description ? ` - ${role.description}` : ''}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          )
-        }
-
-        if (isDecisionMakerDetail(entity)) {
-          // DM in mechanism-expanded view: show role in current mechanism first
-          const mechRelSection = isExpandedMech && (() => {
-            const mechRoles = entity.mechanism_roles.filter(
-              (r) => r.mechanism.id === expandedMechanismId
-            )
-            if (mechRoles.length === 0) return null
-            return (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                  Role in this Mechanism
-                </Typography>
-                {mechRoles.map((role) => (
-                  <Box
-                    key={role.id}
-                    sx={{
-                      mb: 1.5,
-                      pl: 2,
-                      borderLeft: '3px solid',
-                      borderColor: alpha(theme.palette.primary.main, 0.33),
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ color: 'primary.main' }}>
-                      {role.role_type}
-                    </Typography>
-                    {role.description && (
-                      <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6, mt: 0.5 }}>
-                        {role.description}
-                      </Typography>
-                    )}
-                  </Box>
-                ))}
-              </Box>
-            )
-          })()
-
-          return (
-            <>
-              {mechRelSection}
-              {entity.mechanism_roles.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                    Connected Mechanisms
-                  </Typography>
-                  {entity.mechanism_roles.map((role) => (
-                    <Box
-                      key={role.id}
-                      sx={{
-                        mb: 1.5,
-                        pl: 2,
-                        borderLeft: '3px solid',
-                        borderColor: alpha(theme.palette.primary.main, 0.2),
-                      }}
-                    >
-                      <Link
-                        component="button"
-                        variant="subtitle2"
-                        onClick={() => onNavigate?.(role.mechanism.id)}
-                        sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, textAlign: 'left' }}
-                      >
-                        {role.mechanism.name}
-                      </Link>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {role.role_type}
-                        {role.description ? ` - ${role.description}` : ''}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              {entity.institution_memberships.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                    Institution Memberships
-                  </Typography>
-                  {entity.institution_memberships.map((m) => (
-                    <Box
-                      key={m.id}
-                      sx={{
-                        mb: 1,
-                        pl: 2,
-                        borderLeft: '3px solid',
-                        borderColor: alpha(theme.palette.secondary.main, 0.2),
-                      }}
-                    >
-                      <Link
-                        component="button"
-                        variant="subtitle2"
-                        onClick={() => onNavigate?.(m.institution.id)}
-                        sx={{ color: 'secondary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, textAlign: 'left' }}
-                      >
-                        {m.institution.name}
-                      </Link>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {m.membership_type}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              {entity.aliases_as_source.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                    Can Act As
-                  </Typography>
-                  {entity.aliases_as_source.map((alias) => (
-                    <Box
-                      key={alias.id}
-                      sx={{
-                        mb: 1.5,
-                        pl: 2,
-                        borderLeft: '3px solid',
-                        borderColor: alpha(theme.palette.secondary.main, 0.2),
-                      }}
-                    >
-                      <Link
-                        component="button"
-                        variant="subtitle2"
-                        onClick={() => onNavigate?.(alias.target.id)}
-                        sx={{ color: 'secondary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, textAlign: 'left' }}
-                      >
-                        {alias.target.name}
-                      </Link>
-                      {alias.description && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {alias.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              {entity.aliases_as_target.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                    Acted As By
-                  </Typography>
-                  {entity.aliases_as_target.map((alias) => (
-                    <Box
-                      key={alias.id}
-                      sx={{
-                        mb: 1.5,
-                        pl: 2,
-                        borderLeft: '3px solid',
-                        borderColor: alpha(theme.palette.secondary.main, 0.2),
-                      }}
-                    >
-                      <Link
-                        component="button"
-                        variant="subtitle2"
-                        onClick={() => onNavigate?.(alias.source.id)}
-                        sx={{ color: 'secondary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, textAlign: 'left' }}
-                      >
-                        {alias.source.name}
-                      </Link>
-                      {alias.description && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {alias.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </>
-          )
-        }
-
-        if (isInstitutionDetail(entity)) {
-          return (
-            <>
-              {entity.members.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
-                    Members ({entity.members.length})
-                  </Typography>
-                  {entity.members.map((m) => (
-                    <Box
-                      key={m.id}
-                      sx={{
-                        mb: 1,
-                        pl: 2,
-                        borderLeft: '3px solid',
-                        borderColor: alpha(theme.palette.secondary.main, 0.2),
-                      }}
-                    >
-                      <Link
-                        component="button"
-                        variant="subtitle2"
-                        onClick={() => onNavigate?.(m.decision_maker.id)}
-                        sx={{ color: 'secondary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, textAlign: 'left' }}
-                      >
-                        {m.decision_maker.name}
-                      </Link>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {m.membership_type}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </>
-          )
-        }
-
-        return null
-      })()}
+      {isMechanismDetail(entity) && (
+        <MechanismRelationships entity={entity} onNavigate={onNavigate} />
+      )}
+      {isDecisionMakerDetail(entity) && (
+        <DecisionMakerRelationships
+          entity={entity}
+          expandedMechanismId={expandedMechanismId}
+          onNavigate={onNavigate}
+        />
+      )}
+      {isInstitutionDetail(entity) && (
+        <InstitutionRelationships entity={entity} onNavigate={onNavigate} />
+      )}
     </Box>
   )
 }
