@@ -2,12 +2,18 @@ from django.contrib.auth import authenticate, login, logout
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
+
+
+class LoginRateThrottle(AnonRateThrottle):
+    scope = 'login'
 
 
 class LoginAPIView(APIView):
     """Authenticate with email and password, create a session."""
     permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         email = request.data.get('email')

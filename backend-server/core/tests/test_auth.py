@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.django_db
+
 
 def test_login_success(api_client, admin_user):
     response = api_client.post(
