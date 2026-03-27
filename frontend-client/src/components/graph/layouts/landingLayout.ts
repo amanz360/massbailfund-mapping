@@ -42,7 +42,7 @@ export function applyNodeDecorations(
 /**
  * Pin institution nodes at evenly-spaced circle positions.
  */
-export function pinInstitutions(
+function pinInstitutions(
   cy: Core,
   radius: number,
 ): {

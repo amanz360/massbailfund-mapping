@@ -94,11 +94,6 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'text-max-width': '180px',
     },
   },
-  // DM nodes in expanded view
-  {
-    selector: 'node.expanded-dm',
-    style: {},
-  },
   // Center DM in DM-centric expanded view
   {
     selector: 'node.center-dm',

@@ -13,11 +13,9 @@ interface SearchOption {
 
 interface SearchBarProps {
   onSelect: (nodeId: string) => void
-  /** Extra options to merge in (e.g. from browse data). Graph options are always included. */
-  extraOptions?: SearchOption[]
 }
 
-export default function SearchBar({ onSelect, extraOptions }: SearchBarProps) {
+export default function SearchBar({ onSelect }: SearchBarProps) {
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const graphData = useSelector(selectGraphData)
@@ -50,14 +48,8 @@ export default function SearchBar({ onSelect, extraOptions }: SearchBarProps) {
         }
       }
     }
-    // Merge extra options (browse data may load before graph)
-    if (extraOptions) {
-      for (const o of extraOptions) {
-        if (!byId.has(o.id)) byId.set(o.id, o)
-      }
-    }
     return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [graphData, extraOptions])
+  }, [graphData])
 
   return (
     <Autocomplete
