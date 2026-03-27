@@ -19,7 +19,9 @@ export default function RelationshipItem({
   const theme = useTheme()
 
   // Resolve MUI palette path (e.g. 'primary.main') to a color value
-  const resolvedColor = color.split('.').reduce<any>((obj, key) => obj?.[key], theme.palette) ?? color
+  const [group, shade] = color.split('.') as [string, string]
+  const paletteGroup = (theme.palette as unknown as Record<string, Record<string, string>>)[group]
+  const resolvedColor = paletteGroup?.[shade] ?? color
 
   return (
     <Box
