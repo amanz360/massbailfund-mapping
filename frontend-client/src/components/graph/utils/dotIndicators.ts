@@ -1,63 +1,54 @@
 import type { GraphData } from '../../../types/models'
 import type cytoscape from 'cytoscape'
+import { dmGroups, GROUP_FALLBACK_COLOR } from './groupColors'
 
 const DOT_SIZE = 10
+const DOT_GAP = 2
+/** DM diamond width from cytoscape-styles.ts — cytoscape background positions
+ *  are percentages of node width, so pixel offsets divide through by it. */
+const DM_WIDTH = 140
 
-/** Generate an SVG data URI for a small circle dot indicator. */
-export function generateDotSvg(color: string, filled: boolean): string {
+/** SVG data URI for a filled group dot with a white separating ring. */
+export function generateDotSvg(color: string): string {
   const s = DOT_SIZE
-  const r = 3.5
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}">
-    <circle cx="${s / 2}" cy="${s / 2}" r="${r}"
-            fill="${filled ? color : 'none'}" stroke="${color}" stroke-width="${filled ? 0 : 1.5}"/>
+    <circle cx="${s / 2}" cy="${s / 2}" r="3.5" fill="${color}" stroke="#FFFFFF" stroke-width="1"/>
   </svg>`
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
 }
 
-/** Compute dot indicator SVGs for a DM node based on its institution memberships. */
+/** Dot indicator SVGs for a DM node — one per connected mechanism group. */
 export function computeDmDots(
   dmId: string,
   data: GraphData,
-  institutionColors: Map<string, string>,
+  groupColors: Map<string, string>,
 ): string[] {
-  const dots: { uri: string; filled: boolean; name: string }[] = []
-
-  for (const m of data.memberships) {
-    if (m.member !== dmId) continue
-    const color = institutionColors.get(m.institution)
-    if (!color) continue
-
-    const filled = m.membership_type === 'Primary'
-    const uri = generateDotSvg(color, filled)
-    const inst = data.nodes.find((n) => n.id === m.institution)
-    dots.push({ uri, filled, name: inst?.name ?? '' })
-  }
-
-  // Primary (filled) dots first, then alphabetical by institution name
-  dots.sort((a, b) => {
-    if (a.filled !== b.filled) return a.filled ? -1 : 1
-    return a.name.localeCompare(b.name)
-  })
-  return dots.map((d) => d.uri)
+  return dmGroups(dmId, data).map((g) =>
+    generateDotSvg(groupColors.get(g) ?? GROUP_FALLBACK_COLOR),
+  )
 }
 
-/** Apply institution dot indicators to a cytoscape DM node. */
-export function applyDotIndicators(node: cytoscape.NodeSingular, data: GraphData, institutionColors: Map<string, string>) {
-  const uris = computeDmDots(node.id(), data, institutionColors)
+/** Apply mechanism-group dot indicators to a cytoscape DM node. */
+export function applyDotIndicators(
+  node: cytoscape.NodeSingular,
+  data: GraphData,
+  groupColors: Map<string, string>,
+) {
+  const uris = computeDmDots(node.id(), data, groupColors)
   if (uris.length === 0) return
 
   const sz = `${DOT_SIZE}px`
   const widths = uris.map(() => sz)
   const heights = uris.map(() => sz)
 
-  // Center dots inside the diamond, just above the label text
+  // Center the dot row horizontally inside the diamond, just above the label
   const pos_x: string[] = []
   const pos_y: string[] = []
-  const totalWidth = uris.length * DOT_SIZE + (uris.length - 1) * 2 // 2px gap between dots
-  const startX = 50 - (totalWidth / 2 / 140) * 100 // 140px = DM diamond width
+  const totalWidth = uris.length * DOT_SIZE + (uris.length - 1) * DOT_GAP
+  const startX = 50 - (totalWidth / 2 / DM_WIDTH) * 100
   for (let i = 0; i < uris.length; i++) {
-    const offsetPx = i * (DOT_SIZE + 2)
-    pos_x.push(`${startX + (offsetPx / 140) * 100}%`)
+    const offsetPx = i * (DOT_SIZE + DOT_GAP)
+    pos_x.push(`${startX + (offsetPx / DM_WIDTH) * 100}%`)
     pos_y.push('18%')
   }
 
