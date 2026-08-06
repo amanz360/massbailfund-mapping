@@ -87,7 +87,6 @@ def institution_membership(institution, decision_maker):
     return InstitutionMembership.objects.create(
         institution=institution,
         decision_maker=decision_maker,
-        membership_type="Primary",
     )
 
 
