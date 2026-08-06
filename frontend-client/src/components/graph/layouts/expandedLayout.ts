@@ -129,10 +129,10 @@ function computeMechanism(
   // Collect connected DM IDs
   const { nodeIds: dmIdSet } = getConnectedByType(mechanismId, data, 'Decision Maker')
 
-  // Collect primary institutions of those DMs
+  // Collect institutions of those DMs
   const instIdSet = new Set<string>()
   for (const m of data.memberships) {
-    if (dmIdSet.has(m.member) && m.membership_type === 'Primary') {
+    if (dmIdSet.has(m.member)) {
       instIdSet.add(m.institution)
     }
   }
@@ -143,7 +143,7 @@ function computeMechanism(
   for (const dmId of dmIdSet) dmToInsts.set(dmId, [])
   for (const instId of instIdSet) instToDms.set(instId, [])
   for (const m of data.memberships) {
-    if (dmIdSet.has(m.member) && m.membership_type === 'Primary' && instIdSet.has(m.institution)) {
+    if (dmIdSet.has(m.member) && instIdSet.has(m.institution)) {
       dmToInsts.get(m.member)!.push(m.institution)
       instToDms.get(m.institution)!.push(m.member)
     }
@@ -212,9 +212,9 @@ function computeDm(
   const { nodeIds: mechIdSet } = getConnectedByType(dmId, data, 'Mechanism')
   const mechIds = [...mechIdSet]
 
-  // Collect primary institution IDs
+  // Collect institution IDs
   const instIds = data.memberships
-    .filter((m) => m.member === dmId && m.membership_type === 'Primary')
+    .filter((m) => m.member === dmId)
     .map((m) => m.institution)
 
   const MECH_COUNT = mechIds.length
@@ -259,11 +259,11 @@ function computeInstitution(
 ): Map<string, Position> {
   const positions = new Map<string, Position>()
 
-  // Find DMs with primary membership at this institution
-  const primaryDmIds = data.memberships
-    .filter((m) => m.institution === institutionId && m.membership_type === 'Primary')
+  // Find DMs that are members of this institution
+  const memberDmIds = data.memberships
+    .filter((m) => m.institution === institutionId)
     .map((m) => m.member)
-  const dmIdSet = new Set(primaryDmIds)
+  const dmIdSet = new Set(memberDmIds)
 
   // Find mechanisms connected to those DMs
   const mechIdSet = new Set<string>()
