@@ -1,11 +1,10 @@
 import { Box, Typography, useTheme, alpha } from '@mui/material'
 
 interface GraphLegendProps {
-  institutionColors: Map<string, string>
-  institutions: { id: string; name: string }[]
+  groups: { name: string; color: string }[]
 }
 
-export const GraphLegend = ({ institutionColors, institutions }: GraphLegendProps) => {
+export const GraphLegend = ({ groups }: GraphLegendProps) => {
   const theme = useTheme()
 
   return (
@@ -27,48 +26,32 @@ export const GraphLegend = ({ institutionColors, institutions }: GraphLegendProp
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 16, height: 10, borderRadius: 0.5, backgroundColor: 'primary.main', flexShrink: 0 }} />
+        <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: '#4A3AA7', flexShrink: 0 }} />
         <Typography variant="caption" sx={{ color: 'text.primary', lineHeight: 1.2 }}>Mechanism</Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: 'secondary.main', border: '2px solid', borderColor: 'institution.main', flexShrink: 0 }} />
+        <Box sx={{ width: 12, height: 12, transform: 'rotate(45deg)', backgroundColor: '#E8C97E', border: '2px solid #000F35', flexShrink: 0 }} />
         <Typography variant="caption" sx={{ color: 'text.primary', lineHeight: 1.2 }}>Decision Maker</Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: 'institution.main', flexShrink: 0 }} />
+        <Box sx={{ width: 16, height: 10, borderRadius: 0.5, backgroundColor: '#000F35', flexShrink: 0 }} />
         <Typography variant="caption" sx={{ color: 'text.primary', lineHeight: 1.2 }}>Institution</Typography>
       </Box>
-      <Box sx={{ mt: 0.75, borderTop: '1px solid', borderColor: 'divider', pt: 0.75 }}>
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-          Institutions
-        </Typography>
-        {institutions.map((inst) => {
-          const color = institutionColors.get(inst.id) || theme.palette.text.disabled
-          return (
-            <Box key={inst.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
-              <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                <Box sx={{
-                  width: 9, height: 9, borderRadius: '50%',
-                  backgroundColor: color, flexShrink: 0,
-                }} />
-                <Box sx={{
-                  width: 9, height: 9, borderRadius: '50%',
-                  border: `1.5px solid ${color}`,
-                  backgroundColor: 'transparent', flexShrink: 0,
-                }} />
-              </Box>
+      {groups.length > 0 && (
+        <Box sx={{ mt: 0.75, borderTop: '1px solid', borderColor: 'divider', pt: 0.75 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            Mechanism Groups
+          </Typography>
+          {groups.map((g) => (
+            <Box key={g.name} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+              <Box sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: g.color, flexShrink: 0 }} />
               <Typography variant="caption" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
-                {inst.name}
+                {g.name}
               </Typography>
             </Box>
-          )
-        })}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.disabled', lineHeight: 1.2 }}>
-            ● Primary &middot; ○ External
-          </Typography>
+          ))}
         </Box>
-      </Box>
+      )}
     </Box>
   )
 }

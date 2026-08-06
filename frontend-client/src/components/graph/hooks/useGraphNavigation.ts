@@ -7,7 +7,6 @@ import { selectEntity, clearDetail } from '../../../store/slices/detailSlice'
 import { cytoscapeStyles } from '../cytoscape-styles'
 import { buildLandingElements, buildExpandedElements } from '../elements'
 import { applyLandingLayout, applyNodeDecorations, computeExpandedPositions, ensureEdgeLabelsFit } from '../layouts'
-import { computeInstMemberCount } from '../utils'
 
 /**
  * Central coordinator for graph view state, Cytoscape lifecycle, and rendering.
@@ -17,8 +16,7 @@ import { computeInstMemberCount } from '../utils'
  */
 export function useGraphNavigation(
   graphData: GraphData | null,
-  institutionColors: Map<string, string>,
-  fallbackInstitutionColor: string,
+  groupColors: Map<string, string>,
   dispatch: AppDispatch,
   callbacks: {
     onNodeSelect?: (id: string | null) => void
@@ -64,7 +62,7 @@ export function useGraphNavigation(
     const elements = buildLandingElements(graphData)
     cy.add(elements)
 
-    const layout = applyLandingLayout(cy, graphData, institutionColors, fallbackInstitutionColor)
+    const layout = applyLandingLayout(cy, graphData, groupColors)
     layoutRef.current = layout
 
     setCurrentLevel('landing')
@@ -74,7 +72,7 @@ export function useGraphNavigation(
     callbacks.onInstitutionExpand?.(null)
     callbacks.onNodeSelect?.(null)
     dispatch(clearDetail())
-  }, [cyRef, layoutRef, graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
+  }, [cyRef, layoutRef, graphData, groupColors, dispatch, callbacks])
 
   const renderExpanded = useCallback((viewType: ExpandedViewType, entityId: string) => {
     if (!cyRef.current || !graphData) return
@@ -90,8 +88,7 @@ export function useGraphNavigation(
     cy.add(elements)
 
     // Apply decorations (same as landing — consistent node styling across views)
-    const instMemberCount = computeInstMemberCount(graphData.memberships)
-    applyNodeDecorations(cy, graphData, institutionColors, instMemberCount, fallbackInstitutionColor)
+    applyNodeDecorations(cy, graphData, groupColors)
 
     const positions = computeExpandedPositions(viewType, entityId, graphData)
     const layout = cy.layout({
@@ -116,7 +113,7 @@ export function useGraphNavigation(
     callbacks.onInstitutionExpand?.(viewType === 'institution' ? entityId : null)
     callbacks.onNodeSelect?.(entityId)
     dispatch(selectEntity(entityId))
-  }, [cyRef, layoutRef, graphData, institutionColors, fallbackInstitutionColor, dispatch, callbacks])
+  }, [cyRef, layoutRef, graphData, groupColors, dispatch, callbacks])
 
   // Initialize cytoscape and do initial render when graphData is available
   useEffect(() => {
