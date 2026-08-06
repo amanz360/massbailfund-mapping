@@ -49,7 +49,7 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
 
   for (const dmId of connectedDmIds) {
     const dm = nodeById.get(dmId)
-    if (dm) elements.push(nodeElement(dm, { classes: 'expanded-dm' }))
+    if (dm) elements.push(nodeElement(dm))
   }
 
   for (const edge of relevantEdges) {
@@ -132,7 +132,7 @@ function buildInstitutionExpanded(data: GraphData, institutionId: string): Eleme
 
   for (const dmId of memberDmIds) {
     const dm = nodeById.get(dmId)
-    if (dm) elements.push(nodeElement(dm, { classes: 'expanded-dm' }))
+    if (dm) elements.push(nodeElement(dm))
   }
 
   for (const dmId of memberDmIds) {

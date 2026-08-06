@@ -17,7 +17,7 @@ export function buildLandingElements(data: GraphData): ElementDefinition[] {
   }
 
   for (const edge of data.edges) {
-    const el = roleEdgeElement(edge, nodeById, 'landing-edge')
+    const el = roleEdgeElement(edge, nodeById)
     if (el) elements.push(el)
   }
 

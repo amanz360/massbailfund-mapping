@@ -59,7 +59,7 @@ export function nodeElement(
 export function roleEdgeElement(
   edge: GraphEdge,
   nodeById: Map<string, GraphNode>,
-  classes: string,
+  classes?: string,
 ): ElementDefinition | null {
   const source = nodeById.get(edge.source)
   const target = nodeById.get(edge.target)
@@ -72,6 +72,6 @@ export function roleEdgeElement(
       : [edge.target, edge.source]
   return {
     data: { id: edge.id, source: dmId, target: mechId, relationship_type: edge.relationship_type },
-    classes,
+    ...(classes && { classes }),
   }
 }
