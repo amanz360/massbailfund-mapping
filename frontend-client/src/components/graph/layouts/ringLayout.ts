@@ -102,8 +102,8 @@ export function computeRingPositions(data: GraphData): Map<string, Position> {
 
   const cols = insts.length > 1 ? 2 : 1
   const rows = Math.max(Math.ceil(insts.length / cols), 1)
-  const gridHalfW = ((cols - 1) * INST_COL_GAP) / 2 + 90 // + half institution width
-  const gridHalfH = ((rows - 1) * INST_ROW_GAP) / 2 + 40 // + half institution height
+  const gridHalfW = ((cols - 1) * INST_COL_GAP) / 2 + 90 // + half institution width (80) + 10 margin
+  const gridHalfH = ((rows - 1) * INST_ROW_GAP) / 2 + 40 // + half institution height (35) + 5 margin
   const gridCorner = Math.hypot(gridHalfW, gridHalfH)
 
   // Each ring clears the one inside it, and grows further out if its own
