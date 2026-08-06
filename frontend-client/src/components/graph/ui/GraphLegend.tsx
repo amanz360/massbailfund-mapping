@@ -1,4 +1,5 @@
 import { Box, Typography, useTheme, alpha } from '@mui/material'
+import { GROUP_FALLBACK_COLOR } from '../utils'
 
 interface GraphLegendProps {
   groups: { name: string; color: string }[]
@@ -26,7 +27,9 @@ export const GraphLegend = ({ groups }: GraphLegendProps) => {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: '#4A3AA7', flexShrink: 0 }} />
+        {/* Neutral fill, matching the pre-decoration mechanism color — a group
+            color here would read as one specific group's key. */}
+        <Box sx={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: GROUP_FALLBACK_COLOR, flexShrink: 0 }} />
         <Typography variant="caption" sx={{ color: 'text.primary', lineHeight: 1.2 }}>Mechanism</Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
