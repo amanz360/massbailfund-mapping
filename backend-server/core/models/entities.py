@@ -134,7 +134,6 @@ class InstitutionMembership(BaseModel):
     decision_maker = models.ForeignKey(
         DecisionMaker, on_delete=models.CASCADE, related_name="institution_memberships"
     )
-    membership_type = models.CharField(max_length=255)
 
     class Meta:
         constraints = [
@@ -143,10 +142,10 @@ class InstitutionMembership(BaseModel):
                 name="unique_institution_decision_maker",
             )
         ]
-        ordering = ["institution", "membership_type", "decision_maker"]
+        ordering = ["institution", "decision_maker"]
 
     def __str__(self):
-        return f"{self.decision_maker.name} in {self.institution.name} ({self.membership_type})"
+        return f"{self.decision_maker.name} in {self.institution.name}"
 
 
 class Resource(BaseModel):

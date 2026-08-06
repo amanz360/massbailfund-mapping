@@ -1,31 +1,32 @@
 import type { StylesheetStyle } from 'cytoscape'
 
 export const cytoscapeStyles: StylesheetStyle[] = [
-  // Mechanism nodes (purple)
+  // Mechanism nodes — large circles on the outer ring, colored per group
+  // by applyNodeDecorations (this gray is the pre-decoration fallback)
   {
     selector: 'node[primary_type="Mechanism"]',
     style: {
-      'background-color': '#5525E3',
-      shape: 'roundrectangle',
+      'background-color': '#4A5568',
+      shape: 'ellipse',
       label: 'data(name)',
       'font-family': '"Source Sans 3", sans-serif',
       'text-valign': 'center',
       'text-halign': 'center',
       'text-wrap': 'wrap',
-      'text-max-width': '140px',
+      'text-max-width': '110px',
       'font-size': '12px',
-      'font-weight': 600,
+      'font-weight': 700,
       color: '#ffffff',
-      width: '160px',
-      height: '60px',
+      width: '150px',
+      height: '150px',
       'border-width': 0,
     },
   },
-  // Decision Maker nodes (diamond — flowchart decision symbol)
+  // Decision Maker nodes — gold diamonds, group dots applied as decorations
   {
     selector: 'node[primary_type="Decision Maker"]',
     style: {
-      'background-color': '#000F35',
+      'background-color': '#E8C97E',
       shape: 'diamond',
       label: 'data(name)',
       'font-family': '"Source Sans 3", sans-serif',
@@ -35,134 +36,79 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'text-max-width': '90px',
       'font-size': '11px',
       'font-weight': 600,
-      color: '#ffffff',
+      color: '#000F35',
       width: '140px',
       height: '100px',
-      'border-width': 0,
+      'border-width': 2,
+      'border-color': '#000F35',
     },
   },
-  // Institution nodes (circle — reinforces membership dot indicators)
+  // Institution nodes — navy rounded rectangles in the center grid
   {
     selector: 'node[primary_type="Institution"]',
     style: {
-      'background-color': '#4A5568',
-      shape: 'ellipse',
+      'background-color': '#000F35',
+      shape: 'roundrectangle',
       label: 'data(name)',
       'font-family': '"Source Sans 3", sans-serif',
       'text-valign': 'center',
       'text-halign': 'center',
       'text-wrap': 'wrap',
-      'text-max-width': '75px',
+      'text-max-width': '140px',
       'font-size': '11px',
       'font-weight': 700,
       color: '#ffffff',
-      width: '95px',
-      height: '95px',
-      'border-width': 2,
-      'border-color': '#ffffff',
+      width: '160px',
+      height: '70px',
+      'border-width': 0,
     },
   },
-  // Larger institutions in landing view — anchor the layout boundary
-  {
-    selector: 'node.landing-institution',
-    style: {
-      width: '120px',
-      height: '120px',
-      'font-size': '13px',
-      'text-max-width': '90px',
-    },
-  },
-  // Center institution in expanded view
+  // Center entity variants for expanded views
   {
     selector: 'node.center-institution',
-    style: {
-      width: '130px',
-      height: '130px',
-      'font-size': '13px',
-      'font-weight': 700,
-      'text-max-width': '95px',
-    },
+    style: { width: '180px', height: '80px', 'font-size': '13px', 'font-weight': 700, 'text-max-width': '160px' },
   },
-  // Center mechanism in expanded view
   {
     selector: 'node.center-mechanism',
-    style: {
-      width: '200px',
-      height: '75px',
-      'font-size': '14px',
-      'font-weight': 700,
-      'text-max-width': '180px',
-    },
+    style: { width: '170px', height: '170px', 'font-size': '13px', 'font-weight': 700, 'text-max-width': '130px' },
   },
-  // Center DM in DM-centric expanded view
   {
     selector: 'node.center-dm',
-    style: {
-      width: '180px',
-      height: '130px',
-      'font-size': '13px',
-      'font-weight': 700,
-      'text-max-width': '110px',
-    },
+    style: { width: '180px', height: '130px', 'font-size': '13px', 'font-weight': 700, 'text-max-width': '110px' },
   },
   // Clicked DM in expanded view
   {
     selector: 'node.active-dm',
-    style: {
-      'border-width': 3,
-      'border-color': '#8891ED',
-    },
+    style: { 'border-width': 3, 'border-color': '#5525E3' },
   },
   // Selected node
   {
     selector: 'node:selected',
-    style: {
-      'border-width': 3,
-      'border-color': '#8891ED',
-    },
+    style: { 'border-width': 3, 'border-color': '#5525E3' },
   },
-  // Edges — default
+  // Edges — faint by default so ~100 edges read as texture, not hairball
   {
     selector: 'edge',
     style: {
-      width: 2,
+      width: 1.5,
       'line-color': '#6b6088',
       'target-arrow-color': '#6b6088',
-      'target-arrow-shape': 'triangle',
-      'curve-style': 'bezier',
-      opacity: 0.35,
-    },
-  },
-  // Hidden membership edges — invisible by default, shown on DM hover
-  {
-    selector: 'edge.hidden-membership-edge',
-    style: {
-      opacity: 0,
-      width: 0,
       'target-arrow-shape': 'none',
-      'events': 'no',
+      'curve-style': 'bezier',
+      opacity: 0.1,
     },
   },
-  // Revealed hidden membership edges (during DM hover)
+  // Membership edges (Institution → DM) — dashed to distinguish from roles
   {
-    selector: 'edge.hidden-membership-edge.revealed',
+    selector: 'edge.membership-edge',
     style: {
-      opacity: 1,
-      width: 1.5,
-      'target-arrow-shape': 'triangle',
       'line-style': 'dashed',
       'line-dash-pattern': [6, 4] as never,
+      'line-color': '#4A5568',
+      'target-arrow-color': '#4A5568',
     },
   },
-  // Landing view mechanism↔DM edges — subtle but visible
-  {
-    selector: 'edge.landing-edge',
-    style: {
-      opacity: 0.2,
-      'target-arrow-shape': 'none',
-    },
-  },
-  // Edge hover — show label on mouseover
+  // Edge hover — full opacity, arrow, label
   {
     selector: 'edge.hover-edge',
     style: {
@@ -170,6 +116,7 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       opacity: 1,
       'line-color': '#5525E3',
       'target-arrow-color': '#5525E3',
+      'target-arrow-shape': 'triangle',
       label: 'data(relationship_type)',
       'font-size': '10px',
       'text-background-color': '#F2EDF4',
@@ -179,12 +126,13 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'text-rotation': 'autorotate',
     },
   },
-  // Edges in expanded view — visible relationship type labels
+  // Edges in expanded view — visible with relationship labels + arrows
   {
     selector: 'edge.expanded-edge',
     style: {
       width: 2.5,
       opacity: 0.85,
+      'target-arrow-shape': 'triangle',
       label: 'data(relationship_type)',
       'font-size': '10px',
       'text-wrap': 'wrap',
@@ -196,31 +144,22 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       'text-rotation': 'autorotate',
     },
   },
-  // Institution membership edges — subtle, no label
+  // Membership edges inside expanded views stay visible
   {
-    selector: 'edge.membership-edge',
-    style: {
-      width: 1.5,
-      opacity: 0.4,
-      'line-color': '#4A5568',
-      'target-arrow-color': '#4A5568',
-      'target-arrow-shape': 'triangle',
-      'line-style': 'dashed',
-      'line-dash-pattern': [6, 4] as never,
-      'curve-style': 'bezier',
-    },
+    selector: 'edge.membership-edge.expanded-membership',
+    style: { opacity: 0.55, 'target-arrow-shape': 'triangle' },
   },
   // Dimmed state
   {
     selector: '.dimmed',
-    style: { opacity: 0.12 },
+    style: { opacity: 0.08 },
   },
   // Highlighted node
   {
     selector: 'node.highlighted',
     style: { opacity: 1 },
   },
-  // Highlighted edge — show relationship label
+  // Highlighted edge — full opacity, arrow, relationship label
   {
     selector: 'edge.highlighted',
     style: {
@@ -228,6 +167,7 @@ export const cytoscapeStyles: StylesheetStyle[] = [
       width: 2.5,
       'line-color': '#5525E3',
       'target-arrow-color': '#5525E3',
+      'target-arrow-shape': 'triangle',
       label: 'data(relationship_type)',
       'font-size': '9px',
       'text-background-color': '#F2EDF4',

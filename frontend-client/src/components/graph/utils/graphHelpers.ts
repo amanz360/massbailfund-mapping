@@ -53,36 +53,25 @@ export function nodeElement(
 }
 
 /**
- * Count primary members per institution.
- * Returns a map of institution ID -> number of DMs with primary membership.
+ * Build a role edge element rendered DM → Mechanism regardless of stored
+ * direction, so the map reads as one outward flow: Institution → DM → Mechanism.
  */
-export function computeInstMemberCount(
-  memberships: GraphData['memberships'],
-): Map<string, number> {
-  const counts = new Map<string, number>()
-  for (const m of memberships) {
-    if (m.membership_type === 'Primary') {
-      counts.set(m.institution, (counts.get(m.institution) ?? 0) + 1)
-    }
+export function roleEdgeElement(
+  edge: GraphEdge,
+  nodeById: Map<string, GraphNode>,
+  classes?: string,
+): ElementDefinition | null {
+  const source = nodeById.get(edge.source)
+  const target = nodeById.get(edge.target)
+  if (!source || !target) return null
+  const types = new Set([source.primary_type, target.primary_type])
+  if (!(types.has('Mechanism') && types.has('Decision Maker'))) return null
+  const [dmId, mechId] =
+    source.primary_type === 'Decision Maker'
+      ? [edge.source, edge.target]
+      : [edge.target, edge.source]
+  return {
+    data: { id: edge.id, source: dmId, target: mechId, relationship_type: edge.relationship_type },
+    ...(classes && { classes }),
   }
-  return counts
-}
-
-/**
- * Find the "best" institution for a DM -- the one with fewest primary members.
- * Smaller institutions get stronger affinity, producing tighter clustering.
- * Returns the institution ID, or null if the DM has no primary memberships.
- */
-export function getBestInstitution(
-  dmId: string,
-  memberships: GraphData['memberships'],
-  instMemberCount: Map<string, number>,
-): string | null {
-  const primaryInsts = memberships
-    .filter((m) => m.member === dmId && m.membership_type === 'Primary')
-    .map((m) => m.institution)
-  if (primaryInsts.length === 0) return null
-  return primaryInsts.reduce((best, id) =>
-    (instMemberCount.get(id) ?? Infinity) < (instMemberCount.get(best) ?? Infinity) ? id : best,
-  )
 }

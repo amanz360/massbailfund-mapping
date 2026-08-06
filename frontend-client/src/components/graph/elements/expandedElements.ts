@@ -1,7 +1,7 @@
 import type { ElementDefinition } from 'cytoscape'
 import type { GraphData } from '../../../types/models'
 import type { ExpandedViewType } from '../types'
-import { nodeElement, getConnectedByType } from '../utils'
+import { nodeElement, getConnectedByType, roleEdgeElement } from '../utils'
 
 /**
  * Build expanded-view elements for any of the three expanded views
@@ -23,12 +23,20 @@ export function buildExpandedElements(
   }
 }
 
+function membershipEdge(id: string, institutionId: string, dmId: string): ElementDefinition {
+  return {
+    data: { id, source: institutionId, target: dmId, relationship_type: 'Member' },
+    classes: 'membership-edge expanded-membership',
+  }
+}
+
 // ── Mechanism-expanded view ───────────────────────────────────────────
 
 function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDefinition[] {
   const elements: ElementDefinition[] = []
+  const nodeById = new Map(data.nodes.map((n) => [n.id, n]))
 
-  const mechanism = data.nodes.find((n) => n.id === mechanismId)
+  const mechanism = nodeById.get(mechanismId)
   if (!mechanism) return elements
 
   elements.push(nodeElement(mechanism, { classes: 'center-mechanism' }))
@@ -40,44 +48,27 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
   )
 
   for (const dmId of connectedDmIds) {
-    const dm = data.nodes.find((n) => n.id === dmId)
-    if (!dm) continue
-    elements.push(nodeElement(dm, { classes: 'expanded-dm' }))
+    const dm = nodeById.get(dmId)
+    if (dm) elements.push(nodeElement(dm))
   }
 
   for (const edge of relevantEdges) {
-    elements.push({
-      data: {
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        relationship_type: edge.relationship_type,
-      },
-      classes: 'expanded-edge',
-    })
+    const el = roleEdgeElement(edge, nodeById, 'expanded-edge')
+    if (el) elements.push(el)
   }
 
-  // Add primary institution nodes and membership edges for connected DMs
+  // Institutions of the connected DMs, with membership edges
   const addedInsts = new Set<string>()
   for (const dmId of connectedDmIds) {
     for (const m of data.memberships) {
-      if (m.member === dmId && m.membership_type === 'Primary') {
-        if (!addedInsts.has(m.institution)) {
-          const inst = data.nodes.find((n) => n.id === m.institution)
-          if (!inst) continue
-          elements.push(nodeElement(inst))
-          addedInsts.add(m.institution)
-        }
-        elements.push({
-          data: {
-            id: `mech-dm-inst-${dmId}-${m.institution}`,
-            source: dmId,
-            target: m.institution,
-            relationship_type: 'Member',
-          },
-          classes: 'membership-edge',
-        })
+      if (m.member !== dmId) continue
+      if (!addedInsts.has(m.institution)) {
+        const inst = nodeById.get(m.institution)
+        if (!inst) continue
+        elements.push(nodeElement(inst))
+        addedInsts.add(m.institution)
       }
+      elements.push(membershipEdge(`mech-dm-inst-${dmId}-${m.institution}`, m.institution, dmId))
     }
   }
 
@@ -88,8 +79,9 @@ function buildMechanismExpanded(data: GraphData, mechanismId: string): ElementDe
 
 function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
   const elements: ElementDefinition[] = []
+  const nodeById = new Map(data.nodes.map((n) => [n.id, n]))
 
-  const dm = data.nodes.find((n) => n.id === dmId)
+  const dm = nodeById.get(dmId)
   if (!dm) return elements
 
   elements.push(nodeElement(dm, { classes: 'center-dm' }))
@@ -101,39 +93,22 @@ function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
   )
 
   for (const mechId of connectedMechIds) {
-    const mech = data.nodes.find((n) => n.id === mechId)
-    if (!mech) continue
-    elements.push(nodeElement(mech))
+    const mech = nodeById.get(mechId)
+    if (mech) elements.push(nodeElement(mech))
   }
 
   for (const edge of relevantEdges) {
-    elements.push({
-      data: {
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        relationship_type: edge.relationship_type,
-      },
-      classes: 'expanded-edge',
-    })
+    const el = roleEdgeElement(edge, nodeById, 'expanded-edge')
+    if (el) elements.push(el)
   }
 
-  // Add primary institution nodes and membership edges
+  // Every institution this DM belongs to
   for (const m of data.memberships) {
-    if (m.member === dmId && m.membership_type === 'Primary') {
-      const inst = data.nodes.find((n) => n.id === m.institution)
-      if (!inst) continue
-      elements.push(nodeElement(inst))
-      elements.push({
-        data: {
-          id: `dm-inst-${dmId}-${m.institution}`,
-          source: dmId,
-          target: m.institution,
-          relationship_type: 'Member',
-        },
-        classes: 'membership-edge',
-      })
-    }
+    if (m.member !== dmId) continue
+    const inst = nodeById.get(m.institution)
+    if (!inst) continue
+    elements.push(nodeElement(inst))
+    elements.push(membershipEdge(`dm-inst-${dmId}-${m.institution}`, m.institution, dmId))
   }
 
   return elements
@@ -143,69 +118,52 @@ function buildDmExpanded(data: GraphData, dmId: string): ElementDefinition[] {
 
 function buildInstitutionExpanded(data: GraphData, institutionId: string): ElementDefinition[] {
   const elements: ElementDefinition[] = []
+  const nodeById = new Map(data.nodes.map((n) => [n.id, n]))
 
-  const institution = data.nodes.find((n) => n.id === institutionId)
+  const institution = nodeById.get(institutionId)
   if (!institution) return elements
 
   elements.push(nodeElement(institution, { classes: 'center-institution' }))
 
-  // Primary DMs of this institution
-  const primaryDmIds = data.memberships
-    .filter((m) => m.institution === institutionId && m.membership_type === 'Primary')
+  const memberDmIds = data.memberships
+    .filter((m) => m.institution === institutionId)
     .map((m) => m.member)
-  const dmIdSet = new Set(primaryDmIds)
+  const dmIdSet = new Set(memberDmIds)
 
-  for (const dmId of primaryDmIds) {
-    const dm = data.nodes.find((n) => n.id === dmId)
-    if (!dm) continue
-    elements.push(nodeElement(dm, { classes: 'expanded-dm' }))
+  for (const dmId of memberDmIds) {
+    const dm = nodeById.get(dmId)
+    if (dm) elements.push(nodeElement(dm))
   }
 
-  // Add edges from DMs to institution (arrows point toward institution)
-  for (const dmId of primaryDmIds) {
-    elements.push({
-      data: {
-        id: `inst-${institutionId}-${dmId}`,
-        source: dmId,
-        target: institutionId,
-        relationship_type: 'Member',
-      },
-      classes: 'membership-edge',
-    })
+  for (const dmId of memberDmIds) {
+    elements.push(membershipEdge(`inst-${institutionId}-${dmId}`, institutionId, dmId))
   }
 
-  // Add mechanisms connected to those DMs and their edges
+  // Mechanisms connected to those DMs and their edges
   const addedMechs = new Set<string>()
   for (const edge of data.edges) {
     let dm: string | null = null
     let mech: string | null = null
 
-    if (dmIdSet.has(edge.source)) {
-      const target = data.nodes.find((n) => n.id === edge.target)
-      if (target?.primary_type === 'Mechanism') { dm = edge.source; mech = edge.target }
+    if (dmIdSet.has(edge.source) && nodeById.get(edge.target)?.primary_type === 'Mechanism') {
+      dm = edge.source
+      mech = edge.target
     }
-    if (dmIdSet.has(edge.target)) {
-      const source = data.nodes.find((n) => n.id === edge.source)
-      if (source?.primary_type === 'Mechanism') { dm = edge.target; mech = edge.source }
+    if (dmIdSet.has(edge.target) && nodeById.get(edge.source)?.primary_type === 'Mechanism') {
+      dm = edge.target
+      mech = edge.source
     }
     if (!dm || !mech) continue
 
     if (!addedMechs.has(mech)) {
-      const mechNode = data.nodes.find((n) => n.id === mech)
+      const mechNode = nodeById.get(mech)
       if (!mechNode) continue
       elements.push(nodeElement(mechNode))
       addedMechs.add(mech)
     }
 
-    elements.push({
-      data: {
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        relationship_type: edge.relationship_type,
-      },
-      classes: 'expanded-edge',
-    })
+    const el = roleEdgeElement(edge, nodeById, 'expanded-edge')
+    if (el) elements.push(el)
   }
 
   return elements

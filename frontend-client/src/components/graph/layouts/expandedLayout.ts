@@ -4,13 +4,28 @@ import { getConnectedByType } from '../utils'
 
 type Position = { x: number; y: number }
 
-// Shared expanded-view layout constants
-const ARC_VERT_SPACING = 95 // vertical gap between mechanism nodes on the parabolic arc
-const ARC_BASE_DIST = 200 // minimum horizontal distance from center column to arc
+// Node bounding boxes, mirroring cytoscape-styles.ts. Column pitches are
+// derived from these so restyling a node cannot silently reintroduce overlaps.
+const MECH_SIZE = 150 // mechanism circle diameter
+const DM_HEIGHT = 100 // decision-maker diamond height
+const INST_HEIGHT = 70 // institution round-rect height
 
-/** DM vertical spacing: generous when few, compact when many. */
+/** Empty space kept between adjacent nodes in a column or arc. */
+const NODE_GAP = 25
+
+// Shared expanded-view layout constants
+const ARC_VERT_SPACING = MECH_SIZE + NODE_GAP // pitch between mechanisms on the parabolic arc
+const ARC_BASE_DIST = 200 // minimum horizontal distance from center column to arc
+const DM_MIN_SPACING = DM_HEIGHT + NODE_GAP // tightest legible DM pitch
+const INST_MIN_SPACING = INST_HEIGHT + NODE_GAP // tightest legible institution pitch
+const INST_SPACING = 120 // default institution pitch, used when nothing forces it wider
+
+/**
+ * DM vertical spacing: generous when few, at the minimum pitch when many.
+ * Never tighter than the node height, so tall columns grow instead of colliding.
+ */
 function dmSpacing(count: number): number {
-  return count <= 4 ? 120 : Math.max(110, Math.ceil(480 / count))
+  return count <= 4 ? DM_MIN_SPACING + 30 : DM_MIN_SPACING
 }
 
 /**
@@ -129,10 +144,10 @@ function computeMechanism(
   // Collect connected DM IDs
   const { nodeIds: dmIdSet } = getConnectedByType(mechanismId, data, 'Decision Maker')
 
-  // Collect primary institutions of those DMs
+  // Collect institutions of those DMs
   const instIdSet = new Set<string>()
   for (const m of data.memberships) {
-    if (dmIdSet.has(m.member) && m.membership_type === 'Primary') {
+    if (dmIdSet.has(m.member)) {
       instIdSet.add(m.institution)
     }
   }
@@ -143,7 +158,7 @@ function computeMechanism(
   for (const dmId of dmIdSet) dmToInsts.set(dmId, [])
   for (const instId of instIdSet) instToDms.set(instId, [])
   for (const m of data.memberships) {
-    if (dmIdSet.has(m.member) && m.membership_type === 'Primary' && instIdSet.has(m.institution)) {
+    if (dmIdSet.has(m.member) && instIdSet.has(m.institution)) {
       dmToInsts.get(m.member)!.push(m.institution)
       instToDms.get(m.institution)!.push(m.member)
     }
@@ -177,12 +192,15 @@ function computeMechanism(
     positions.set(id, { x, y })
   }
 
-  // Institutions on the left, spanning the same vertical range as DMs
+  // Institutions on the left. They track the DM column's vertical range so the
+  // two columns read as aligned, but the pitch never compresses below the node
+  // height — with more institutions than DMs the column grows instead, and
+  // cy.fit rescales the viewport to suit.
   if (instOrder.length > 0) {
     const INST_X = -200 // left column x-position, symmetric with mechanism at x=250
     const INST_COUNT = instOrder.length
-    const instTotalHeight = INST_COUNT === 1 ? 0 : dmTotalHeight
-    const instSpacing = INST_COUNT === 1 ? 0 : instTotalHeight / (INST_COUNT - 1)
+    const instSpacing =
+      INST_COUNT === 1 ? 0 : Math.max(INST_MIN_SPACING, dmTotalHeight / (INST_COUNT - 1))
 
     for (const { id, x, y } of verticalStack(instOrder, INST_X, instSpacing)) {
       positions.set(id, { x, y })
@@ -212,9 +230,9 @@ function computeDm(
   const { nodeIds: mechIdSet } = getConnectedByType(dmId, data, 'Mechanism')
   const mechIds = [...mechIdSet]
 
-  // Collect primary institution IDs
+  // Collect institution IDs
   const instIds = data.memberships
-    .filter((m) => m.member === dmId && m.membership_type === 'Primary')
+    .filter((m) => m.member === dmId)
     .map((m) => m.institution)
 
   const MECH_COUNT = mechIds.length
@@ -227,13 +245,13 @@ function computeDm(
     positions.set(id, { x, y })
   }
 
-  // Institutions: left side with fixed 120px spacing
+  // Institutions: left side, evenly stacked at the default pitch
   if (INST_COUNT > 0) {
     const INST_RADIUS = 200 // horizontal distance from center DM to institution column
     if (INST_COUNT === 1) {
       positions.set(instIds[0], { x: -INST_RADIUS, y: 0 })
     } else {
-      const instSpacing = 120
+      const instSpacing = INST_SPACING
       const totalHeight = (INST_COUNT - 1) * instSpacing
       for (let i = 0; i < INST_COUNT; i++) {
         positions.set(instIds[i], {
@@ -259,11 +277,11 @@ function computeInstitution(
 ): Map<string, Position> {
   const positions = new Map<string, Position>()
 
-  // Find DMs with primary membership at this institution
-  const primaryDmIds = data.memberships
-    .filter((m) => m.institution === institutionId && m.membership_type === 'Primary')
+  // Find DMs that are members of this institution
+  const memberDmIds = data.memberships
+    .filter((m) => m.institution === institutionId)
     .map((m) => m.member)
-  const dmIdSet = new Set(primaryDmIds)
+  const dmIdSet = new Set(memberDmIds)
 
   // Find mechanisms connected to those DMs
   const mechIdSet = new Set<string>()

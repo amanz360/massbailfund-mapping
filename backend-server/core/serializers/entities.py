@@ -136,14 +136,14 @@ class InstitutionMembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InstitutionMembership
-        fields = ["id", "institution", "decision_maker", "membership_type"]
+        fields = ["id", "institution", "decision_maker"]
         read_only_fields = fields
 
 
 class InstitutionMembershipWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstitutionMembership
-        fields = ["id", "institution", "decision_maker", "membership_type"]
+        fields = ["id", "institution", "decision_maker"]
 
 
 # ── Detail serializers ────────────────────────────────────────────────────
@@ -266,7 +266,6 @@ class GraphSerializer:
                 "id": str(m.id),
                 "institution": str(m.institution_id),
                 "member": str(m.decision_maker_id),
-                "membership_type": m.membership_type,
             }
             for m in InstitutionMembership.objects.all()
         ]

@@ -98,6 +98,7 @@ def test_graph_response_shape(api_client, mechanism, decision_maker, institution
     assert data["edges"][0]["target"] == str(decision_maker.id)
 
     assert len(data["memberships"]) == 1
+    assert set(data["memberships"][0]) == {"id", "institution", "member"}
     assert data["memberships"][0]["institution"] == str(institution.id)
     assert data["memberships"][0]["member"] == str(decision_maker.id)
 

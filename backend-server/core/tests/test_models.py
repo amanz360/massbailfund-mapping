@@ -148,21 +148,16 @@ class TestInstitutionMembership:
         membership = InstitutionMembership.objects.create(
             institution=inst,
             decision_maker=dm,
-            membership_type="Primary",
         )
         assert membership.institution == inst
         assert membership.decision_maker == dm
-        assert str(membership) == "Judge in Trial Courts (Primary)"
+        assert str(membership) == "Judge in Trial Courts"
         assert inst.members.count() == 1
         assert dm.institution_memberships.count() == 1
 
     def test_unique_constraint(self):
         inst = Institution.objects.create(name="Trial Courts")
         dm = DecisionMaker.objects.create(name="Judge")
-        InstitutionMembership.objects.create(
-            institution=inst, decision_maker=dm, membership_type="Primary",
-        )
+        InstitutionMembership.objects.create(institution=inst, decision_maker=dm)
         with pytest.raises(IntegrityError):
-            InstitutionMembership.objects.create(
-                institution=inst, decision_maker=dm, membership_type="External",
-            )
+            InstitutionMembership.objects.create(institution=inst, decision_maker=dm)

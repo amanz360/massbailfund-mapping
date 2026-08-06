@@ -66,7 +66,6 @@ export interface InstitutionMembershipItem {
   id: string
   institution: InstitutionListItem
   decision_maker: DecisionMakerListItem
-  membership_type: string
 }
 
 // ── Resource types ─────────────────────────────────────────────────────
@@ -160,7 +159,6 @@ export interface GraphMembership {
   id: string
   institution: string
   member: string
-  membership_type: string
 }
 
 export interface GraphData {

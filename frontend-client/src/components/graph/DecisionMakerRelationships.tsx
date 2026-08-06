@@ -63,7 +63,6 @@ export default function DecisionMakerRelationships({
             <RelationshipItem
               key={m.id}
               name={m.institution.name}
-              caption={m.membership_type}
               color="secondary.main"
               onClick={() => onNavigate?.(m.institution.id)}
             />

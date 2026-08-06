@@ -19,7 +19,6 @@ export default function InstitutionRelationships({ entity, onNavigate }: Institu
         <RelationshipItem
           key={m.id}
           name={m.decision_maker.name}
-          caption={m.membership_type}
           color="secondary.main"
           onClick={() => onNavigate?.(m.decision_maker.id)}
         />

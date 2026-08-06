@@ -1,12 +1,19 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Box, CircularProgress, Typography, useTheme } from '@mui/material'
+import { Box, CircularProgress, Typography } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch } from '../../store/store'
 import { selectGraphData, selectGraphLoading } from '../../store/slices/graphSlice'
-import { buildInstitutionColorsFromGraph } from '../../utils/entities'
 import type { SystemMapProps } from './types'
+import { buildGroupColors } from './utils'
 import { useGraphNavigation, useGraphEvents } from './hooks'
-import { HelpOverlay, HELP_STORAGE_KEY, GraphBreadcrumb, GraphLegend, GraphControls } from './ui'
+import {
+  HelpOverlay,
+  HELP_STORAGE_KEY,
+  GraphBreadcrumb,
+  GraphLegend,
+  GraphControls,
+  MapInfoPanel,
+} from './ui'
 
 export default function SystemMap({
   onNodeSelect,
@@ -17,14 +24,20 @@ export default function SystemMap({
   focusCounter,
   resetCounter,
 }: SystemMapProps) {
-  const theme = useTheme()
   const dispatch = useDispatch<AppDispatch>()
   const graphData = useSelector(selectGraphData)
   const graphLoading = useSelector(selectGraphLoading)
 
-  // Memoize institution colors from graph data
-  const institutionColors = useMemo(
-    () => (graphData ? buildInstitutionColorsFromGraph(graphData.nodes) : new Map<string, string>()),
+  // Mechanism group colors, derived from the subcategories present in the data
+  const groupColors = useMemo(
+    () =>
+      graphData
+        ? buildGroupColors(
+            graphData.nodes
+              .filter((n) => n.primary_type === 'Mechanism')
+              .map((n) => n.secondary_type),
+          )
+        : new Map<string, string>(),
     [graphData],
   )
 
@@ -49,8 +62,7 @@ export default function SystemMap({
     renderExpanded,
   } = useGraphNavigation(
     graphData,
-    institutionColors,
-    theme.palette.institution.main,
+    groupColors,
     dispatch,
     callbacks,
     focusNodeId,
@@ -100,16 +112,10 @@ export default function SystemMap({
   const handleDismissHint = useCallback(() => setHintDismissed(true), [])
   const handleShowHelp = useCallback(() => setHintDismissed(false), [])
 
-  // Institution list for legend
-  const institutions = useMemo(
-    () =>
-      graphData
-        ? graphData.nodes
-            .filter((n) => n.primary_type === 'Institution')
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map((n) => ({ id: n.id, name: n.name }))
-        : [],
-    [graphData],
+  // Mechanism group list for legend
+  const legendGroups = useMemo(
+    () => [...groupColors.entries()].map(([name, color]) => ({ name, color })),
+    [groupColors],
   )
 
   // Loading state
@@ -138,7 +144,9 @@ export default function SystemMap({
       {currentLevel !== 'landing' && (
         <GraphBreadcrumb entityName={expandedEntityName} onReset={renderLanding} />
       )}
-      <GraphLegend institutionColors={institutionColors} institutions={institutions} />
+      {/* Landing only: the breadcrumb occupies the same top-left slot in expanded views */}
+      {currentLevel === 'landing' && <MapInfoPanel />}
+      <GraphLegend groups={legendGroups} />
       <GraphControls cyRef={cyRef} onToggleHelp={handleShowHelp} />
     </Box>
   )

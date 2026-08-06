@@ -1,4 +1,4 @@
-import type { DecisionMakerDetail, GraphNode, MechanismReference, MechanismTimelineEntryItem } from '../types/models'
+import type { DecisionMakerDetail, MechanismReference, MechanismTimelineEntryItem } from '../types/models'
 
 // ── Institution colors ────────────────────────────────────────────────
 
@@ -21,13 +21,6 @@ export function buildInstitutionColors(items: { id: string; name: string }[]): M
     colors.set(sorted[i].id, INSTITUTION_PALETTE[i % INSTITUTION_PALETTE.length])
   }
   return colors
-}
-
-/** Overload for GraphNode[] — filters to institutions first. */
-export function buildInstitutionColorsFromGraph(nodes: GraphNode[]): Map<string, string> {
-  return buildInstitutionColors(
-    nodes.filter((n) => n.primary_type === 'Institution'),
-  )
 }
 
 // ── Auto-description for Decision Makers ──────────────────────────────

@@ -160,7 +160,7 @@ class DecisionMakerAliasViewSet(PublicReadAdminWriteViewSet):
 class InstitutionMembershipViewSet(PublicReadAdminWriteViewSet):
     queryset = InstitutionMembership.objects.select_related("institution", "decision_maker")
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["institution", "membership_type"]
+    filterset_fields = ["institution"]
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):

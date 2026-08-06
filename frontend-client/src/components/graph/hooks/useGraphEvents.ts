@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import type { MutableRefObject } from 'react'
-import type cytoscape from 'cytoscape'
 import type { Core } from 'cytoscape'
 import type { AppDispatch } from '../../../store/store'
 import type { GraphData } from '../../../types/models'
@@ -100,7 +99,7 @@ export function useGraphEvents(
 
     // --- Edge hover handlers ---
     cy.on('mouseover', 'edge', (evt) => {
-      if (currentLevelRef.current === 'landing' && !evt.target.hasClass('hidden-membership-edge')) {
+      if (currentLevelRef.current === 'landing') {
         evt.target.addClass('hover-edge')
       }
     })
@@ -119,7 +118,7 @@ export function useGraphEvents(
         const instId = node.id()
         const memberIds = new Set(
           data.memberships
-            .filter((m) => m.institution === instId && m.membership_type === 'Primary')
+            .filter((m) => m.institution === instId)
             .map((m) => m.member),
         )
         const mechIds = new Set(
@@ -134,7 +133,6 @@ export function useGraphEvents(
           if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
         })
         cy.edges().forEach((e) => {
-          if (e.hasClass('hidden-membership-edge')) return
           const src = e.data('source')
           const tgt = e.data('target')
           if (e.hasClass('membership-edge')) {
@@ -149,7 +147,7 @@ export function useGraphEvents(
         return
       }
 
-      // Mechanism hover on landing: highlight connected DMs + their primary institutions
+      // Mechanism hover on landing: highlight connected DMs + their institutions
       if (data && node.data('primary_type') === 'Mechanism' && currentLevelRef.current === 'landing') {
         const mechId = node.id()
         // Find connected DMs
@@ -159,10 +157,10 @@ export function useGraphEvents(
             .flatMap((e) => [e.source, e.target])
             .filter((id) => id !== mechId && data.nodes.find((n) => n.id === id)?.primary_type === 'Decision Maker'),
         )
-        // Find primary institutions of those DMs
+        // Find the institutions of those DMs
         const instIds = new Set(
           data.memberships
-            .filter((m) => dmIds.has(m.member) && m.membership_type === 'Primary')
+            .filter((m) => dmIds.has(m.member))
             .map((m) => m.institution),
         )
         const relatedIds = new Set([mechId, ...dmIds, ...instIds])
@@ -172,7 +170,6 @@ export function useGraphEvents(
           if (relatedIds.has(n.id())) n.removeClass('dimmed').addClass('highlighted')
         })
         cy.edges().forEach((e) => {
-          if (e.hasClass('hidden-membership-edge')) return
           const src = e.data('source')
           const tgt = e.data('target')
           if (e.hasClass('membership-edge')) {
@@ -187,7 +184,7 @@ export function useGraphEvents(
         return
       }
 
-      // DM hover on landing: highlight connected mechanisms + all primary institutions
+      // DM hover on landing: highlight connected mechanisms + all institutions
       if (data && node.data('primary_type') === 'Decision Maker' && currentLevelRef.current === 'landing') {
         const dmId = node.id()
         // Find connected mechanisms
@@ -197,10 +194,10 @@ export function useGraphEvents(
             .flatMap((e) => [e.source, e.target])
             .filter((id) => id !== dmId && data.nodes.find((n) => n.id === id)?.primary_type === 'Mechanism'),
         )
-        // Find ALL primary institutions for this DM
+        // Find ALL institutions for this DM
         const instIds = new Set(
           data.memberships
-            .filter((m) => m.member === dmId && m.membership_type === 'Primary')
+            .filter((m) => m.member === dmId)
             .map((m) => m.institution),
         )
         const relatedIds = new Set([dmId, ...mechIds, ...instIds])
@@ -212,10 +209,8 @@ export function useGraphEvents(
         cy.edges().forEach((e) => {
           const src = e.data('source')
           const tgt = e.data('target')
-          // Reveal hidden membership edges for this DM so all primary institutions show
-          if (e.hasClass('membership-edge') || e.hasClass('hidden-membership-edge')) {
+          if (e.hasClass('membership-edge')) {
             if ((src === dmId && instIds.has(tgt)) || (tgt === dmId && instIds.has(src))) {
-              if (e.hasClass('hidden-membership-edge')) e.addClass('revealed')
               e.removeClass('dimmed').addClass('highlighted')
             }
           } else if ((src === dmId && mechIds.has(tgt)) || (tgt === dmId && mechIds.has(src))) {
@@ -226,7 +221,7 @@ export function useGraphEvents(
       }
 
       // Default: highlight direct neighbors (for expanded views)
-      const connectedEdges = node.connectedEdges().filter((e: cytoscape.EdgeSingular) => !e.hasClass('hidden-membership-edge'))
+      const connectedEdges = node.connectedEdges()
       const connectedNodes = connectedEdges.connectedNodes()
 
       cy.elements().addClass('dimmed')
@@ -240,8 +235,6 @@ export function useGraphEvents(
       const c = cyRef.current
       if (!c) return
       c.elements().removeClass('dimmed highlighted')
-      // Remove revealed class so hidden membership edges go back to invisible
-      c.edges('.hidden-membership-edge').removeClass('revealed')
     })
 
     // --- Background tap: return to landing from expanded views ---

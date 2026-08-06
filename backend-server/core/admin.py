@@ -98,12 +98,11 @@ class MechanismRoleInline(DatalistMixin, admin.TabularInline):
     datalist_fields = {"role_type": MechanismRole}
 
 
-class MembershipInline(DatalistMixin, admin.TabularInline):
+class MembershipInline(admin.TabularInline):
     model = InstitutionMembership
     fk_name = "institution"
     extra = 0
-    fields = ["decision_maker", "membership_type"]
-    datalist_fields = {"membership_type": InstitutionMembership}
+    fields = ["decision_maker"]
 
 
 class DecisionMakerRoleInline(admin.TabularInline):
@@ -222,12 +221,11 @@ class DecisionMakerAliasAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstitutionMembership)
-class InstitutionMembershipAdmin(DatalistMixin, admin.ModelAdmin):
-    list_display = ("institution", "decision_maker", "membership_type")
-    list_filter = ("institution", "membership_type")
+class InstitutionMembershipAdmin(admin.ModelAdmin):
+    list_display = ("institution", "decision_maker")
+    list_filter = ("institution",)
     list_select_related = ("institution", "decision_maker")
     autocomplete_fields = ("institution", "decision_maker")
-    datalist_fields = {"membership_type": InstitutionMembership}
 
 
 @admin.register(Resource)
