@@ -1,12 +1,14 @@
 #!/bin/bash
+set -euo pipefail
 
-if test -z "$PORT"; then
-  PORT=8080
+if test -z "${PORT:-}"; then
+  export PORT=8080
 fi
 
 echo "Running migrations"
 python manage.py migrate --noinput
 python manage.py createcachetable 2>/dev/null || true
+python manage.py invalidate_api_caches || echo "WARN: cache invalidation failed"
 
 echo "Starting massbailfund"
-uwsgi --ini uwsgi.ini
+exec uwsgi --ini uwsgi.ini

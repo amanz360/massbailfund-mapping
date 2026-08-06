@@ -177,7 +177,12 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "cache_table",
-        "TIMEOUT": None,
+        # Signal-based invalidation misses out-of-band changes (migrations,
+        # snapshot restores, bulk updates), so entries must not live forever.
+        "TIMEOUT": 60 * 60,
+        # Namespace keys per release: during a rolling deploy the outgoing
+        # task would otherwise repopulate keys the incoming task just cleared.
+        "KEY_PREFIX": os.getenv("CI_COMMIT_SHA", ""),
     },
 }
 
