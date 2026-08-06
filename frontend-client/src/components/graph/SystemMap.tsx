@@ -6,7 +6,14 @@ import { selectGraphData, selectGraphLoading } from '../../store/slices/graphSli
 import type { SystemMapProps } from './types'
 import { buildGroupColors } from './utils'
 import { useGraphNavigation, useGraphEvents } from './hooks'
-import { HelpOverlay, HELP_STORAGE_KEY, GraphBreadcrumb, GraphLegend, GraphControls } from './ui'
+import {
+  HelpOverlay,
+  HELP_STORAGE_KEY,
+  GraphBreadcrumb,
+  GraphLegend,
+  GraphControls,
+  MapInfoPanel,
+} from './ui'
 
 export default function SystemMap({
   onNodeSelect,
@@ -137,6 +144,8 @@ export default function SystemMap({
       {currentLevel !== 'landing' && (
         <GraphBreadcrumb entityName={expandedEntityName} onReset={renderLanding} />
       )}
+      {/* Landing only: the breadcrumb occupies the same top-left slot in expanded views */}
+      {currentLevel === 'landing' && <MapInfoPanel />}
       <GraphLegend groups={legendGroups} />
       <GraphControls cyRef={cyRef} onToggleHelp={handleShowHelp} />
     </Box>
