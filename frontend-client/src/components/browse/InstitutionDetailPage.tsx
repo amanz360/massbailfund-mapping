@@ -25,16 +25,14 @@ export default function InstitutionDetailPage({ entity }: Props) {
     return buildInstitutionColors(institutions).get(entity.id)
   }, [institutions, entity.id])
 
-  // Group members by membership type
-  const membersByType = useMemo(() => {
-    const grouped = new Map<string, typeof entity.members>()
-    for (const m of entity.members) {
-      const existing = grouped.get(m.membership_type)
-      if (existing) existing.push(m)
-      else grouped.set(m.membership_type, [m])
-    }
-    return Array.from(grouped.entries()).sort(([a], [b]) => b.localeCompare(a))
-  }, [entity])
+  // Members sorted by name
+  const sortedMembers = useMemo(
+    () =>
+      [...entity.members].sort((a, b) =>
+        a.decision_maker.name.localeCompare(b.decision_maker.name),
+      ),
+    [entity],
+  )
 
   // Cross-reference: mechanisms where this institution's members hold roles
   const connectedMechanisms = useMemo(() => {
@@ -110,17 +108,17 @@ export default function InstitutionDetailPage({ entity }: Props) {
         </Typography>
       )}
 
-      {/* Members grouped by type */}
-      {membersByType.map(([type, members]) => (
-        <Box key={type} sx={{ mb: 3 }}>
+      {/* Members */}
+      {sortedMembers.length > 0 && (
+        <Box sx={{ mb: 3 }}>
           <Typography
             variant="overline"
             sx={{ color: 'text.primary', fontWeight: 700, letterSpacing: '0.08em', display: 'block', mb: 1 }}
           >
-            {type} Members
+            Members
           </Typography>
           <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
-            {members.map((m) => (
+            {sortedMembers.map((m) => (
               <Box component="li" key={m.id} sx={{ mb: 0.75 }}>
                 <Link
                   component={RouterLink}
@@ -133,7 +131,7 @@ export default function InstitutionDetailPage({ entity }: Props) {
             ))}
           </Box>
         </Box>
-      ))}
+      )}
 
       {/* Connected Mechanisms */}
       {connectedMechanisms.length > 0 && (

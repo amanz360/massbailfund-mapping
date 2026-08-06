@@ -70,16 +70,15 @@ export default function BrowseIndex({
     return counts
   }, [mechanismDetails])
 
-  // DM → institution memberships (with type) and institution member counts
+  // DM → institution ids and institution member counts
   const { dmInstitutions, institutionsWithCounts } = useMemo(() => {
-    const dmInst = new Map<string, { instId: string; type: string }[]>()
+    const dmInst = new Map<string, string[]>()
     const instCounts = institutions.map((inst) => {
       const members = inst.members ?? []
       for (const m of members) {
-        const entry = { instId: inst.id, type: m.membership_type }
         const existing = dmInst.get(m.decision_maker.id)
-        if (existing) existing.push(entry)
-        else dmInst.set(m.decision_maker.id, [entry])
+        if (existing) existing.push(inst.id)
+        else dmInst.set(m.decision_maker.id, [inst.id])
       }
       return { ...inst, memberCount: members.length }
     })
@@ -298,7 +297,7 @@ function DecisionMakersSection({
   dmGroups: { authority: string; items: { id: string; name: string }[] }[]
   dmRoleCounts: Map<string, number>
   institutions: { id: string; name: string; memberCount: number }[]
-  dmInstitutions: Map<string, { instId: string; type: string }[]>
+  dmInstitutions: Map<string, string[]>
 }) {
   const theme = useTheme()
   const instColorMap = useMemo(() => buildInstitutionColors(institutions), [institutions])
@@ -347,10 +346,10 @@ function DecisionMakersSection({
               <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
                 {items.map((dm, idx) => {
                   const roleCount = dmRoleCounts.get(dm.id) ?? 0
-                  // Sort memberships: smallest institution first, largest (EO) rightmost
-                  const memberships = [...(dmInstitutions.get(dm.id) ?? [])].sort((a, b) => {
-                    const aCount = institutions.find((i) => i.id === a.instId)?.memberCount ?? 0
-                    const bCount = institutions.find((i) => i.id === b.instId)?.memberCount ?? 0
+                  // Sort institution dots: smallest institution first
+                  const membershipInstIds = [...(dmInstitutions.get(dm.id) ?? [])].sort((a, b) => {
+                    const aCount = institutions.find((i) => i.id === a)?.memberCount ?? 0
+                    const bCount = institutions.find((i) => i.id === b)?.memberCount ?? 0
                     return aCount - bCount
                   })
                   return (
@@ -383,26 +382,20 @@ function DecisionMakersSection({
                         {dm.name}
                       </Link>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto', flexShrink: 0 }}>
-                        {memberships.map((m) => {
-                          const isPrimary = m.type.toLowerCase() === 'primary'
-                          const dotColor = instColorMap.get(m.instId) ?? '#999'
-                          return (
-                            <Box
-                              key={m.instId}
-                              component="span"
-                              title={`${instNames.get(m.instId) ?? ''} (${m.type})`}
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: isPrimary ? dotColor : 'transparent',
-                                border: '1.5px solid',
-                                borderColor: dotColor,
-                                flexShrink: 0,
-                              }}
-                            />
-                          )
-                        })}
+                        {membershipInstIds.map((instId) => (
+                          <Box
+                            key={instId}
+                            component="span"
+                            title={instNames.get(instId) ?? ''}
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: instColorMap.get(instId) ?? '#999',
+                              flexShrink: 0,
+                            }}
+                          />
+                        ))}
                         <Typography
                           component="span"
                           sx={{

@@ -136,9 +136,6 @@ export default function DecisionMakerDetailPage({ entity }: Props) {
               >
                 {m.institution.name}
               </Link>
-              <Typography component="span" sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
-                ({m.membership_type})
-              </Typography>
             </Box>
           ))}
         </Box>
