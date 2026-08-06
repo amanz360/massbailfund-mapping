@@ -13,8 +13,8 @@ const data: GraphData = {
   // API emits Mechanism → DM
   edges: [{ id: 'e1', source: 'm1', target: 'd1', relationship_type: 'Orders', description: '' }],
   memberships: [
-    { id: 'mem1', institution: 'i1', member: 'd1', membership_type: '' },
-    { id: 'mem2', institution: 'i2', member: 'd1', membership_type: '' },
+    { id: 'mem1', institution: 'i1', member: 'd1' },
+    { id: 'mem2', institution: 'i2', member: 'd1' },
   ],
 }
 

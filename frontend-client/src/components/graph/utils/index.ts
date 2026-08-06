@@ -1,5 +1,5 @@
-export { applyDotIndicators } from './dotIndicators'
-export { nodeElement, roleEdgeElement, computeInstMemberCount, getBestInstitution, getConnectedByType } from './graphHelpers'
+export { applyDotIndicators, computeDmDots, generateDotSvg } from './dotIndicators'
+export { nodeElement, getConnectedByType, roleEdgeElement } from './graphHelpers'
 export {
   buildGroupColors,
   groupLabelColor,
