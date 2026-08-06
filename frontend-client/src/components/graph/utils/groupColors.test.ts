@@ -31,6 +31,14 @@ describe('buildGroupColors', () => {
   it('ignores empty subcategories', () => {
     expect(buildGroupColors(['', 'Service Provider']).size).toBe(1)
   })
+
+  it('does not resolve inherited Object members as pinned colors', () => {
+    const colors = buildGroupColors(['constructor', 'toString', '__proto__'])
+    for (const name of ['constructor', 'toString', '__proto__']) {
+      expect(typeof colors.get(name)).toBe('string')
+      expect(colors.get(name)).toMatch(/^#[0-9A-F]{6}$/i)
+    }
+  })
 })
 
 describe('groupLabelColor', () => {

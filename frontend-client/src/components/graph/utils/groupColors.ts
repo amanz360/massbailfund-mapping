@@ -30,7 +30,12 @@ export function buildGroupColors(subcategories: string[]): Map<string, string> {
   const unique = [...new Set(subcategories.filter((s) => s))].sort((a, b) => a.localeCompare(b))
   const used = new Set<string>()
   for (const name of unique) {
-    const pinned = PINNED_GROUP_COLORS[name]
+    // Own-property guard: `name` is admin-authored data, so a subcategory
+    // called e.g. "constructor" must not resolve to an inherited Object member.
+    // (hasOwnProperty rather than Object.hasOwn — the app targets ES2020.)
+    const pinned = Object.prototype.hasOwnProperty.call(PINNED_GROUP_COLORS, name)
+      ? PINNED_GROUP_COLORS[name]
+      : undefined
     if (pinned) {
       result.set(name, pinned)
       used.add(pinned)
