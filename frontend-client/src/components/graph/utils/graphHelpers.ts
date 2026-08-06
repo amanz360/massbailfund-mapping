@@ -53,6 +53,30 @@ export function nodeElement(
 }
 
 /**
+ * Build a role edge element rendered DM → Mechanism regardless of stored
+ * direction, so the map reads as one outward flow: Institution → DM → Mechanism.
+ */
+export function roleEdgeElement(
+  edge: GraphEdge,
+  nodeById: Map<string, GraphNode>,
+  classes: string,
+): ElementDefinition | null {
+  const source = nodeById.get(edge.source)
+  const target = nodeById.get(edge.target)
+  if (!source || !target) return null
+  const types = new Set([source.primary_type, target.primary_type])
+  if (!(types.has('Mechanism') && types.has('Decision Maker'))) return null
+  const [dmId, mechId] =
+    source.primary_type === 'Decision Maker'
+      ? [edge.source, edge.target]
+      : [edge.target, edge.source]
+  return {
+    data: { id: edge.id, source: dmId, target: mechId, relationship_type: edge.relationship_type },
+    classes,
+  }
+}
+
+/**
  * Count primary members per institution.
  * Returns a map of institution ID -> number of DMs with primary membership.
  */
